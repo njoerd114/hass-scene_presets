@@ -10,6 +10,17 @@ Everything has been implemented entirely inside this custom_component, meaning t
 No vendor restrictions. No need for special bridges.
 And, most importantly, no account required :-)
 
+## Features
+
+- Apply colour presets to any colour-capable light, with automatic fallback to colour temperature or brightness-only lights.
+- **Dynamic scenes**: continuously cycle a preset with smooth, smart-shuffled colour transitions.
+- **WLED support**: native WLED presets, effects, palettes, speed and intensity.
+- **Scene entities**: expose presets as native Home Assistant `scene` entities.
+- **Circadian lighting** and time-of-day **scheduling**.
+- **Import / export / share** custom presets, and auto-generate presets from a light's effects.
+- **Server-side sync** of favourites, targets and tunables across devices.
+- Fully local: no cloud, no account.
+
 ## Screenshots
 
 ![ui.png](./img/ui.png)
