@@ -1,4 +1,4 @@
-from scene_presets.validation import merge_presets, validate_presets
+from scene_presets.validation import merge_presets, validate_presets, validate_single_preset
 
 VALID = {
     "presets": [
@@ -180,3 +180,31 @@ def test_invalid_targets_is_rejected():
     _, errors = validate_presets(data)
 
     assert errors
+
+
+def test_validate_single_preset_accepts_a_valid_preset():
+    preset = {"id": "a", "categoryId": "c", "name": "A", "lights": [{"x": 0.1, "y": 0.2}]}
+
+    assert validate_single_preset(preset) == []
+
+
+def test_validate_single_preset_reports_missing_fields():
+    assert validate_single_preset({"id": "a"}) != []
+
+
+def test_validate_single_preset_reports_invalid_lights():
+    preset = {"id": "a", "categoryId": "c", "name": "A", "lights": []}
+
+    assert validate_single_preset(preset) != []
+
+
+def test_validate_single_preset_reports_invalid_optional_fields():
+    preset = {
+        "id": "a",
+        "categoryId": "c",
+        "name": "A",
+        "lights": [{"x": 0.1, "y": 0.2}],
+        "distribution": "nope",
+    }
+
+    assert validate_single_preset(preset) != []

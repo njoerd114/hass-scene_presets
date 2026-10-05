@@ -27,7 +27,8 @@ async def async_setup_view(hass):
     if not hass.data.setdefault(DOMAIN, {}).get("static_paths_registered"):
         static_paths = [
             StaticPathConfig(PANEL_URL, hass.config.path(f'{BASE_PATH}/frontend/scene_presets_panel.js'), True),
-            StaticPathConfig(f'/assets/{DOMAIN}/iconset.js', hass.config.path(f'{BASE_PATH}/res/iconset.js'), True)
+            StaticPathConfig(f'/assets/{DOMAIN}/iconset.js', hass.config.path(f'{BASE_PATH}/res/iconset.js'), True),
+            StaticPathConfig(f'/assets/{DOMAIN}/custom', hass.config.path(f'{BASE_PATH}/userdata/custom/assets'), True)
         ]
 
         static_paths.extend(await get_preset_image_paths(hass))
@@ -62,18 +63,16 @@ async def get_preset_image_paths(hass):
     static_paths = []
 
     for preset in PRESET_DATA.get("presets", []):
+        if preset.get("custom"):
+            continue
+
         img_filename = preset.get("img")
-        is_custom = preset.get("custom")
 
         if img_filename is not None:
-            path = f"{BASE_PATH}/assets/{img_filename}"
-            if is_custom is not None and is_custom:
-                path = f"{BASE_PATH}/userdata/custom/assets/{img_filename}"
-
             static_paths.append(
                 StaticPathConfig(
                     f'/assets/{DOMAIN}/{img_filename}',
-                    hass.config.path(path),
+                    hass.config.path(f"{BASE_PATH}/assets/{img_filename}"),
                     True
                 )
             )

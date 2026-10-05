@@ -99,6 +99,24 @@ def validate_presets(data: object) -> tuple[dict, list[str]]:
     return {"presets": valid_presets, "categories": valid_categories}, errors
 
 
+def validate_single_preset(preset: object) -> list[str]:
+    if not isinstance(preset, dict):
+        return ["preset must be an object"]
+
+    label = preset.get("id", "preset")
+    missing = [field for field in REQUIRED_PRESET_FIELDS if field not in preset]
+    if missing:
+        return [f"preset {label} is missing fields: {', '.join(missing)}"]
+
+    errors = []
+    lights = preset.get("lights")
+    if not isinstance(lights, list) or not lights or not all(_is_xy_color(color) for color in lights):
+        errors.append(f"preset {label} has invalid lights")
+
+    errors.extend(_validate_optional_fields(preset, label))
+    return errors
+
+
 def merge_presets(base: dict, custom: object) -> tuple[dict, list[str]]:
     merged = {
         "presets": list(base.get("presets", [])),
