@@ -1,14 +1,17 @@
-import React, {useEffect, useMemo, useState} from "react";
+import React, {useEffect, useMemo, useRef, useState} from "react";
 import {PresetTile} from "../components/PresetTile";
 import {useLocalStorage} from "../hooks/useLocalStorage";
+import {STORAGE_ERROR_EVENT, getLastStorageError} from "../hooks/storageErrors";
 import HaSwitch from "../components/hass/building_blocks/HaSwitch";
 import {HaTargetSelector, HaTargetSelectorValue} from "../components/hass/selectors/HaTargetSelector";
 import {HaNumberSelector} from "../components/hass/selectors/HaNumberSelector";
+import {HaSelect} from "../components/hass/selectors/HaSelect";
 import HaIconButton from "../components/hass/building_blocks/HaIconButton";
 import {Category, Preset} from "../types";
 import HaDialog from "../components/hass/building_blocks/HaDialog";
 import MwcButton from "../components/hass/building_blocks/MwcButton";
 import {DynamicSceneTile} from "../components/DynamicSceneTile";
+import {CategoryTiles} from "../components/CategoryTiles";
 
 const DEFAULT_TUNABLE_SETTINGS = {
     shuffle: false,
@@ -17,6 +20,8 @@ const DEFAULT_TUNABLE_SETTINGS = {
     customBrightnessValue: 128,
     customTransition: false,
     customTransitionValue: 60,
+    customEffect: false,
+    effectValue: "",
 
     dynamic: false,
     dynamicTransitionValue: 45,
@@ -114,6 +119,103 @@ export const OptionalNumberSelector :React.FunctionComponent<{
     );
 };
 
+export const OptionalSelect :React.FunctionComponent<{
+    label: string,
+    enabled: boolean,
+    setEnabled: (newValue: boolean) => void,
+    value: string,
+    setValue: (newValue: string) => void,
+    options: Array<string>,
+    hass: any
+}> = ({
+    label,
+    enabled,
+    setEnabled,
+    value,
+    setValue,
+    options,
+    hass
+}): React.JSX.Element => {
+    return (
+        <label
+            style={{
+                lineHeight: "3rem"
+            }}
+        >
+            <span style={{marginRight: "0.5rem"}}>{label}</span>
+            <HaSwitch
+                value={enabled}
+                onValueChanged={(value) => {
+                    setEnabled(value);
+                }}
+            />
+            {
+                enabled &&
+                <div
+                    style={{
+                        maxWidth: "540px"
+                    }}
+                >
+                    <HaSelect
+                        hass={hass}
+                        selector={{
+                            "select": {
+                                "options": options
+                            }
+                        }}
+                        value={value}
+                        onValueChanged={(value: string) => {
+                            setValue(value);
+                        }}
+                    />
+                </div>
+            }
+        </label>
+    );
+};
+
+export const LabeledSelect :React.FunctionComponent<{
+    label: string,
+    value: string,
+    setValue: (newValue: string) => void,
+    options: Array<string>,
+    hass: any
+}> = ({
+    label,
+    value,
+    setValue,
+    options,
+    hass
+}): React.JSX.Element => {
+    return (
+        <label
+            style={{
+                lineHeight: "3rem"
+            }}
+        >
+            <span style={{marginRight: "0.5rem"}}>{label}</span>
+            <div
+                style={{
+                    maxWidth: "540px"
+                }}
+            >
+                <HaSelect
+                    hass={hass}
+                    selector={{
+                        "select": {
+                            "options": options
+                        }
+                    }}
+                    value={value}
+                    onValueChanged={(value: string) => {
+                        setValue(value);
+                    }}
+                />
+            </div>
+        </label>
+    );
+};
+
 export const NumberSelector :React.FunctionComponent<{
     label: string,
     value: number,
@@ -183,6 +285,8 @@ export const PresetApplyPage: React.FunctionComponent<{
     const [customBrightnessValue, setCustomBrightnessValue] = useLocalStorage<number>("scene_presets_apply_page_custom_brightness_value", DEFAULT_TUNABLE_SETTINGS.customBrightnessValue);
     const [customTransition, setCustomTransition] = useLocalStorage<boolean>("scene_presets_apply_page_custom_transition", DEFAULT_TUNABLE_SETTINGS.customTransition);
     const [customTransitionValue, setCustomTransitionValue] = useLocalStorage<number>("scene_presets_apply_page_custom_transition_value", DEFAULT_TUNABLE_SETTINGS.customTransitionValue);
+    const [customEffect, setCustomEffect] = useLocalStorage<boolean>("scene_presets_apply_page_custom_effect", DEFAULT_TUNABLE_SETTINGS.customEffect);
+    const [effectValue, setEffectValue] = useLocalStorage<string>("scene_presets_apply_page_effect_value", DEFAULT_TUNABLE_SETTINGS.effectValue);
 
     const [dynamic, setDynamic] = useLocalStorage<boolean>("scene_presets_apply_page_dynamic", DEFAULT_TUNABLE_SETTINGS.dynamic);
     const [dynamicTransitionValue, setDynamicTransitionValue] = useLocalStorage<number>("scene_presets_apply_page_dynamic_transition_value", DEFAULT_TUNABLE_SETTINGS.dynamicTransitionValue);
@@ -190,12 +294,171 @@ export const PresetApplyPage: React.FunctionComponent<{
 
     const [lastDynamicSceneRefresh, setLastDynamicSceneRefresh] = useState(0);
 
-    const [dynamicSceneIds, setDynamicSceneIds] = useState<Array<string>>([]); // Does this make sense or is this a useless attempt at optimization?
     const [dynamicScenes, setDynamicScenes] = useState<any>({});
-    const memoizedDynamicSceneIds = useMemo(() => dynamicSceneIds, [dynamicSceneIds]); // Does this make sense or is this a useless attempt at optimization?
+    const dynamicSceneIds = useMemo(() => Object.keys(dynamicScenes), [dynamicScenes]);
+
+    const [applying, setApplying] = useState<boolean>(false);
+    const [statusMessage, setStatusMessage] = useState<string>("");
+    const [statusIsError, setStatusIsError] = useState<boolean>(false);
+    const [presetSearch, setPresetSearch] = useState<string>("");
+
+    const [distribution, setDistribution] = useLocalStorage<string>("scene_presets_apply_page_distribution", "sequence");
+    const [transitionStyle, setTransitionStyle] = useLocalStorage<string>("scene_presets_apply_page_transition_style", "fade");
+    const [effectPresets, setEffectPresets] = useState<Array<Preset>>([]);
 
 
     const [favoritePresets, setFavoritePresets] = useLocalStorage<Array<string>>("scene_presets_apply_page_favorite_presets", []);
+
+    const availableEffects = React.useMemo(() => {
+        const entityIds = targets?.entity_id;
+        const ids = Array.isArray(entityIds) ? entityIds : (entityIds ? [entityIds] : []);
+        const effects = new Set<string>();
+
+        ids.forEach((entityId) => {
+            const effectList = hass?.states?.[entityId]?.attributes?.effect_list;
+            if (Array.isArray(effectList)) {
+                effectList.forEach((effect) => effects.add(effect));
+            }
+        });
+
+        return Array.from(effects).sort();
+    }, [hass, targets]);
+
+    const selectedEntityIds = React.useMemo(() => {
+        const entityIds = targets?.entity_id;
+        return Array.isArray(entityIds) ? entityIds : (entityIds ? [entityIds] : []);
+    }, [targets]);
+
+    const localize = React.useCallback(
+        (key: string, fallback: string) => hass?.localize?.(`component.scene_presets.${key}`) || fallback,
+        [hass]
+    );
+
+    const hasTargets = React.useMemo(() => {
+        const current = targets || {};
+        const values = [current.entity_id, current.device_id, current.area_id, current.floor_id, current.label_id];
+        return values.some((value) => (Array.isArray(value) ? value.length > 0 : Boolean(value)));
+    }, [targets]);
+
+    useEffect(() => {
+        if (!hasTargets) {
+            setEffectPresets([]);
+            return;
+        }
+
+        hass.callWS({type: "scene_presets/get_effect_presets", targets: targets})
+            .then((result) => setEffectPresets(result?.presets || []))
+            .catch(() => setEffectPresets([]));
+    }, [hass, hasTargets, targets]);
+
+    const targetStates = React.useMemo(() => {
+        const entityIds = targets?.entity_id;
+        const ids = Array.isArray(entityIds) ? entityIds : (entityIds ? [entityIds] : []);
+        return ids.map((entityId) => ({
+            entityId,
+            state: hass?.states?.[entityId]?.state ?? "unknown"
+        }));
+    }, [hass, targets]);
+
+    const serverSyncHydrated = useRef(false);
+    const [serverSync, setServerSync] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        hass.callWS({type: "scene_presets/get_config"})
+            .then((config) => {
+                if (cancelled || !config?.enable_server_sync) {
+                    return null;
+                }
+                setServerSync(true);
+                return hass.callWS({type: "scene_presets/get_prefs"});
+            })
+            .then((prefs) => {
+                if (cancelled || !prefs) {
+                    return;
+                }
+                setFavoritePresets(prefs.favorites || []);
+                setTargets(prefs.targets || {});
+                const tunables = prefs.tunables || {};
+                if (typeof tunables.shuffle === "boolean") setShuffle(tunables.shuffle);
+                if (typeof tunables.smartShuffle === "boolean") setSmartShuffle(tunables.smartShuffle);
+                if (typeof tunables.customBrightness === "boolean") setCustomBrightness(tunables.customBrightness);
+                if (typeof tunables.customBrightnessValue === "number") setCustomBrightnessValue(tunables.customBrightnessValue);
+                if (typeof tunables.customTransition === "boolean") setCustomTransition(tunables.customTransition);
+                if (typeof tunables.customTransitionValue === "number") setCustomTransitionValue(tunables.customTransitionValue);
+                if (typeof tunables.customEffect === "boolean") setCustomEffect(tunables.customEffect);
+                if (typeof tunables.effectValue === "string") setEffectValue(tunables.effectValue);
+                if (typeof tunables.dynamic === "boolean") setDynamic(tunables.dynamic);
+                if (typeof tunables.dynamicTransitionValue === "number") setDynamicTransitionValue(tunables.dynamicTransitionValue);
+                if (typeof tunables.dynamicIntervalValue === "number") setDynamicIntervalValue(tunables.dynamicIntervalValue);
+                if (typeof tunables.distribution === "string") setDistribution(tunables.distribution);
+                if (typeof tunables.transitionStyle === "string") setTransitionStyle(tunables.transitionStyle);
+                serverSyncHydrated.current = true;
+            })
+            .catch((error) => {
+                setServerSync(false);
+                setStatusMessage(error?.message || localize("status.sync_unavailable", "Server sync unavailable; using local storage."));
+                setStatusIsError(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [hass]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        if (!serverSync || !serverSyncHydrated.current) {
+            return;
+        }
+
+        const handle = setTimeout(() => {
+            hass.callWS({
+                type: "scene_presets/set_prefs",
+                favorites: favoritePresets,
+                targets: targets,
+                tunables: {
+                    shuffle, smartShuffle,
+                    customBrightness, customBrightnessValue,
+                    customTransition, customTransitionValue,
+                    customEffect, effectValue,
+                    dynamic, dynamicTransitionValue, dynamicIntervalValue,
+                    distribution, transitionStyle
+                }
+            }).catch((error) => {
+                setStatusMessage(error?.message || localize("status.sync_failed", "Failed to sync preferences."));
+                setStatusIsError(true);
+            });
+        }, 500);
+
+        return () => clearTimeout(handle);
+    }, [
+        serverSync,
+        favoritePresets, targets, shuffle, smartShuffle,
+        customBrightness, customBrightnessValue,
+        customTransition, customTransitionValue,
+        customEffect, effectValue,
+        dynamic, dynamicTransitionValue, dynamicIntervalValue,
+        distribution, transitionStyle,
+        hass
+    ]);
+
+    useEffect(() => {
+        const existing = getLastStorageError();
+        if (existing) {
+            setStatusMessage(existing.message);
+            setStatusIsError(true);
+        }
+
+        const onStorageError = (event: Event) => {
+            const detail = (event as CustomEvent).detail;
+            setStatusMessage(detail?.message || "Browser storage is unavailable.");
+            setStatusIsError(true);
+        };
+
+        window.addEventListener(STORAGE_ERROR_EVENT, onStorageError);
+        return () => window.removeEventListener(STORAGE_ERROR_EVENT, onStorageError);
+    }, []);
 
     const [automationDialogOpen, setAutomationDialogOpen] = useState<boolean>(false);
     const [lastActionPayload, setLastActionPayload] = useState<any>({});
@@ -205,11 +468,9 @@ export const PresetApplyPage: React.FunctionComponent<{
         hass.callWS({
             type: "scene_presets/get_dynamic_scenes",
         }).then(result => {
-            const ids: Array<string> = [];
             const scenes: any = {};
 
             result?.dynamic_scenes?.forEach(s => {
-                ids.push(s.id);
                 scenes[s.id] = {
                     preset_id: s.parameters.preset_id,
                     interval: s.interval,
@@ -218,26 +479,37 @@ export const PresetApplyPage: React.FunctionComponent<{
             });
 
             setDynamicScenes(scenes);
-            setDynamicSceneIds(ids);
-        }).catch(() => {
-            /* intentional */
+        }).catch((error) => {
+            setStatusMessage(error?.message || "Failed to load dynamic scenes.");
+            setStatusIsError(true);
         }).finally(() => {
             setLastDynamicSceneRefresh(Date.now());
         });
     }, [
         hass,
-        setLastDynamicSceneRefresh,
-
-        setDynamicSceneIds
+        setLastDynamicSceneRefresh
     ]);
 
     const handlePresetTap = React.useCallback(
         (id) => {
+            if (applying) {
+                return;
+            }
+
+            if (!hasTargets) {
+                setStatusMessage(localize("status.no_targets", "Select at least one target before applying a preset."));
+                setStatusIsError(true);
+                return;
+            }
+
             let payload: any = {
                 preset_id: id,
                 targets: targets,
 
                 brightness: customBrightness ? customBrightnessValue : undefined,
+                effect: customEffect && effectValue ? effectValue : undefined,
+                distribution: distribution,
+                transition_style: transitionStyle,
             };
             let service: string;
 
@@ -265,11 +537,30 @@ export const PresetApplyPage: React.FunctionComponent<{
                 data: payload
             });
 
+            setApplying(true);
+            setStatusMessage("");
+
+            const wantsResponse = service === "start_dynamic_scene";
+
             hass.callService(
                 "scene_presets",
                 service,
-                payload
-            ).finally(() => {
+                payload,
+                undefined,
+                true,
+                wantsResponse
+            ).then((response) => {
+                const stopped = wantsResponse ? (response?.stopped ?? 0) : 0;
+                const conflictNote = stopped > 0
+                    ? " " + localize("status.dynamic_conflict", "Overlapping dynamic scenes were stopped.")
+                    : "";
+                setStatusMessage(localize("status.applied", "Preset applied.") + conflictNote);
+                setStatusIsError(false);
+            }).catch((error) => {
+                setStatusMessage(error?.message || localize("status.failed", "Failed to apply the preset."));
+                setStatusIsError(true);
+            }).finally(() => {
+                setApplying(false);
                 fetchActiveDynamicScenes();
             });
         },
@@ -278,10 +569,41 @@ export const PresetApplyPage: React.FunctionComponent<{
             targets, shuffle, smartShuffle,
             customBrightness, customBrightnessValue,
             customTransition, customTransitionValue,
+            customEffect, effectValue,
 
             dynamic, dynamicIntervalValue, dynamicTransitionValue,
+            hasTargets, localize, applying,
+            distribution, transitionStyle,
             fetchActiveDynamicScenes
         ]
+    );
+
+    const handleEffectTap = React.useCallback(
+        (preset: Preset) => {
+            if (!hasTargets) {
+                setStatusMessage(localize("status.no_targets", "Select at least one target before applying a preset."));
+                setStatusIsError(true);
+                return;
+            }
+
+            setApplying(true);
+            setStatusMessage("");
+
+            hass.callService("scene_presets", "apply_effect", {
+                targets: targets,
+                effect: preset.effect,
+                brightness: customBrightness ? customBrightnessValue : undefined,
+            }).then(() => {
+                setStatusMessage(localize("status.applied", "Preset applied."));
+                setStatusIsError(false);
+            }).catch((error) => {
+                setStatusMessage(error?.message || localize("status.failed", "Failed to apply the preset."));
+                setStatusIsError(true);
+            }).finally(() => {
+                setApplying(false);
+            });
+        },
+        [hass, targets, hasTargets, customBrightness, customBrightnessValue, localize]
     );
 
     const handleDynamicSceneTap = React.useCallback(
@@ -301,13 +623,17 @@ export const PresetApplyPage: React.FunctionComponent<{
 
     const presetsByCategories = React.useMemo(() => {
         const out = {};
+        const query = presetSearch.trim().toLowerCase();
 
         categories.forEach(category => {
-            out[category.id] = presets.filter(p => p.categoryId === category.id);
+            out[category.id] = presets.filter(p =>
+                p.categoryId === category.id &&
+                (!query || p.name.toLowerCase().includes(query))
+            );
         });
 
         return out;
-    }, [categories, presets]);
+    }, [categories, presets, presetSearch]);
 
 
     const tiles = React.useMemo(() => {
@@ -321,6 +647,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                 id={preset.id}
                 name={preset.name}
                 imgSrc={preset.img ? "/assets/scene_presets/" + preset.img : undefined}
+                colors={preset.lights}
                 onClick={(id) => {
                     handlePresetTap(id);
                 }}
@@ -390,7 +717,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                             fontSize: "1.25rem"
                         }}>
                             <div style={{display: "flex"}}>
-                                Targets
+                                {localize("ui.targets", "Targets")}
                                 <div
                                     style={{
                                         marginTop: "-0.4rem",
@@ -447,6 +774,24 @@ export const PresetApplyPage: React.FunctionComponent<{
                                 }}
                             />
                         </div>
+                        {
+                            targetStates.length > 0 &&
+                            <div
+                                style={{
+                                    marginTop: "0.5rem",
+                                    fontFamily: "monospace",
+                                    fontSize: "0.8rem"
+                                }}
+                            >
+                                {
+                                    targetStates.map(({entityId, state}) => (
+                                        <span key={entityId} style={{marginRight: "0.75rem"}}>
+                                            {entityId}: {state}
+                                        </span>
+                                    ))
+                                }
+                            </div>
+                        }
                         <div
                             style={{
                                 fontWeight: "bolder",
@@ -456,7 +801,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                             }}
                         >
                             <div style={{display: "flex"}}>
-                                Tunables
+                                {localize("ui.tunables", "Tunables")}
                                 <div
                                     style={{
                                         marginTop: "-0.4rem",
@@ -471,10 +816,14 @@ export const PresetApplyPage: React.FunctionComponent<{
                                             setCustomBrightnessValue(DEFAULT_TUNABLE_SETTINGS.customBrightnessValue);
                                             setCustomTransition(DEFAULT_TUNABLE_SETTINGS.customTransition);
                                             setCustomTransitionValue(DEFAULT_TUNABLE_SETTINGS.customTransitionValue);
+                                            setCustomEffect(DEFAULT_TUNABLE_SETTINGS.customEffect);
+                                            setEffectValue(DEFAULT_TUNABLE_SETTINGS.effectValue);
 
                                             setDynamic(DEFAULT_TUNABLE_SETTINGS.dynamic);
                                             setDynamicTransitionValue(DEFAULT_TUNABLE_SETTINGS.dynamicTransitionValue);
                                             setDynamicIntervalValue(DEFAULT_TUNABLE_SETTINGS.dynamicIntervalValue);
+                                            setDistribution("sequence");
+                                            setTransitionStyle("fade");
                                         }}
 
                                         size={28}
@@ -489,7 +838,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                             }}
                         >
                             <Switch
-                                label={"Dynamic"}
+                                label={localize("ui.dynamic", "Dynamic")}
                                 value={dynamic}
                                 setValue={(v) => setDynamic(v)}
                             />
@@ -499,7 +848,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                             !dynamic &&
                             <>
                                 <Switch
-                                    label={"Shuffle Colors"}
+                                    label={localize("ui.shuffle", "Shuffle Colors")}
                                     value={shuffle}
                                     setValue={(v) => setShuffle(v)}
                                 />
@@ -512,7 +861,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                                             style={{marginLeft: "1rem"}}
                                         >
                                             <Switch
-                                                label={"Smart Shuffle"}
+                                                label={localize("ui.smart_shuffle", "Smart Shuffle")}
                                                 value={smartShuffle}
                                                 setValue={(v) => setSmartShuffle(v)}
                                             />
@@ -525,17 +874,17 @@ export const PresetApplyPage: React.FunctionComponent<{
                             dynamic &&
                             <>
                                 <NumberSelector
-                                    label={"Interval"}
+                                    label={localize("ui.interval", "Interval")}
                                     value={dynamicIntervalValue}
                                     setValue={(v) => setDynamicIntervalValue(v)}
-                                    minValue={0}
+                                    minValue={1}
                                     maxValue={300}
                                     hass={hass}
                                     extraSelectorProps={{"unit_of_measurement": "seconds"}}
                                 />
 
                                 <NumberSelector
-                                    label={"Transition"}
+                                    label={localize("ui.transition", "Transition")}
                                     value={dynamicTransitionValue}
                                     setValue={(v) => setDynamicTransitionValue(v)}
                                     minValue={0}
@@ -549,7 +898,7 @@ export const PresetApplyPage: React.FunctionComponent<{
 
 
                         <OptionalNumberSelector
-                            label={"Custom Brightness"}
+                            label={localize("ui.custom_brightness", "Custom Brightness")}
                             enabled={customBrightness}
                             setEnabled={(v) => setCustomBrightness(v)}
                             value={customBrightnessValue}
@@ -566,7 +915,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                         {
                             !dynamic &&
                             <OptionalNumberSelector
-                                label={"Custom Transition"}
+                                label={localize("ui.custom_transition", "Custom Transition")}
                                 enabled={customTransition}
                                 setEnabled={(v) => setCustomTransition(v)}
                                 value={customTransitionValue}
@@ -577,11 +926,83 @@ export const PresetApplyPage: React.FunctionComponent<{
                                 extraSelectorProps={{"unit_of_measurement": "seconds"}}
                             />
                         }
+
+                        {
+                            availableEffects.length > 0 &&
+                            <OptionalSelect
+                                label={localize("ui.custom_effect", "Custom Effect")}
+                                enabled={customEffect}
+                                setEnabled={(v) => setCustomEffect(v)}
+                                value={effectValue}
+                                setValue={(v) => setEffectValue(v)}
+                                options={availableEffects}
+                                hass={hass}
+                            />
+                        }
+
+                        <LabeledSelect
+                            label={localize("ui.distribution", "Distribution")}
+                            value={distribution}
+                            setValue={(v) => setDistribution(v)}
+                            options={["sequence", "balanced", "random"]}
+                            hass={hass}
+                        />
+
+                        <LabeledSelect
+                            label={localize("ui.transition_style", "Transition style")}
+                            value={transitionStyle}
+                            setValue={(v) => setTransitionStyle(v)}
+                            options={["fade", "instant", "ease_in", "ease_out", "ease_in_out"]}
+                            hass={hass}
+                        />
                     </div>
                 </ha-card>
 
                 {
-                    memoizedDynamicSceneIds.length > 0 &&
+                    (applying || statusMessage) &&
+                    <div
+                        role={"status"}
+                        aria-live={"polite"}
+                        style={{
+                            padding: "0.75rem 1rem",
+                            marginTop: "1rem",
+                            borderRadius: "8px",
+                            backgroundColor: statusIsError ? "#7f1d1d" : "#14532d",
+                            color: "#ffffff",
+                            fontFamily: "sans-serif"
+                        }}
+                    >
+                        {applying ? localize("status.applying", "Applying…") : statusMessage}
+                    </div>
+                }
+
+                <div
+                    style={{
+                        marginTop: "1rem",
+                        maxWidth: "540px"
+                    }}
+                >
+                    <input
+                        type={"search"}
+                        value={presetSearch}
+                        placeholder={localize("search.placeholder", "Search presets")}
+                        aria-label={localize("search.placeholder", "Search presets")}
+                        onChange={(event) => setPresetSearch(event.target.value)}
+                        style={{
+                            width: "100%",
+                            boxSizing: "border-box",
+                            padding: "0.75rem",
+                            borderRadius: "8px",
+                            border: "1px solid var(--divider-color, #cccccc)",
+                            backgroundColor: "var(--card-background-color, transparent)",
+                            color: "var(--primary-text-color, inherit)",
+                            fontFamily: "sans-serif"
+                        }}
+                    />
+                </div>
+
+                {
+                    dynamicSceneIds.length > 0 &&
                     <div
                         key={"category_dynamic_scenes"}
                     >
@@ -590,7 +1011,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                                 fontFamily: "sans-serif"
                             }}
                         >
-                            Dynamic scenes
+                            {localize("ui.dynamic_scenes", "Dynamic scenes")}
                         </h3>
                         <div
                             style={{
@@ -600,7 +1021,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                             }}
                         >
                             {
-                                memoizedDynamicSceneIds.map(id => {
+                                dynamicSceneIds.map(id => {
                                     const preset = presetMap[dynamicScenes[id]?.preset_id];
 
                                     const name = preset?.name ?? "Unknown Preset";
@@ -633,7 +1054,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                                 fontFamily: "sans-serif"
                             }}
                         >
-                            Favorites
+                            {localize("ui.favorites", "Favorites")}
                         </h3>
                         <div
                             style={{
@@ -674,15 +1095,46 @@ export const PresetApplyPage: React.FunctionComponent<{
                                         justifyContent: "center"
                                     }}
                                 >
-                                    {presetsByCategories[id].map(p => {
-                                        return <React.Fragment key={id + "_" + p.id}>
-                                            {tiles.all[p.id]}
-                                        </React.Fragment>;
-                                    })}
+                                    <CategoryTiles
+                                        presets={presetsByCategories[id]}
+                                        renderTile={(presetId) => tiles.all[presetId]}
+                                    />
                                 </div>
                             </div>
                         );
                     })
+                }
+
+                {
+                    effectPresets.length > 0 &&
+                    <div key={"category_wled_effects"}>
+                        <h3
+                            style={{
+                                fontFamily: "sans-serif"
+                            }}
+                        >
+                            {localize("ui.wled_effects", "WLED Effects")}
+                        </h3>
+                        <div
+                            style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                justifyContent: "center"
+                            }}
+                        >
+                            {
+                                effectPresets.map((preset) => (
+                                    <PresetTile
+                                        key={"effect_" + preset.id}
+                                        id={preset.id}
+                                        name={preset.name}
+                                        colors={preset.lights}
+                                        onClick={() => handleEffectTap(preset)}
+                                    />
+                                ))
+                            }
+                        </div>
+                    </div>
                 }
 
                 <HaDialog
@@ -690,7 +1142,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                     onClose={() => {
                         setAutomationDialogOpen(false);
                     }}
-                    heading={"Last action payload"}
+                    heading={localize("ui.last_action", "Last action payload")}
                 >
                     <div>
                         Here you can see the payload used by your last action that applied a preset or started a dynamic scene.

@@ -1,5 +1,7 @@
 import {useState} from "react";
 
+import {reportStorageError} from "./storageErrors";
+
 // Adapted from https://gist.github.com/jamesfulford/a7f1fcead386e76bfd9d36136e0da6da
 export const useLocalStorage = <T>(key: string, initialValue: T): [T, (s: T) => void] => {
     const [storedValue, setStoredValue] = useState<T>(() => {
@@ -7,19 +9,18 @@ export const useLocalStorage = <T>(key: string, initialValue: T): [T, (s: T) => 
             const item = window.localStorage.getItem(key);
             return item ? JSON.parse(item) : initialValue;
         } catch (error) {
-            console.warn(error);
+            reportStorageError("local", error);
             return initialValue;
         }
     });
 
     const setValue = (value: T) => {
+        const valueToStore = value instanceof Function ? value(storedValue) : value;
+        setStoredValue(valueToStore);
         try {
-            const valueToStore = value instanceof Function ? value(storedValue) : value;
-            setStoredValue(valueToStore);
             window.localStorage.setItem(key, JSON.stringify(valueToStore));
         } catch (error) {
-            console.warn(error);
-            return;
+            reportStorageError("local", error);
         }
     };
 

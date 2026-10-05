@@ -2,6 +2,7 @@ import React, {useEffect} from "react";
 import {PresetApplyPage} from "./pages/PresetApplyPage";
 import {Category, Preset} from "./types";
 import {useSessionStorage} from "./hooks/useSessionStorage";
+import {logError} from "./log";
 
 declare module "react" {
     namespace JSX {
@@ -43,7 +44,7 @@ export const App : React.FunctionComponent<{
                 setCategories(data.categories);
                 setPresets(data.presets);
             } catch (error) {
-                console.error("Error fetching data:", error);
+                logError("failed to fetch preset data", error);
             }
         };
 

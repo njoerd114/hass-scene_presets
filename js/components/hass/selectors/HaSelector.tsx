@@ -16,19 +16,54 @@ abstract class HaSelector<P> extends Component<P & HaSelectorProps> {
         this.elementRef = React.createRef();
     }
 
+    state = {
+        hasNativeHaSelector: typeof customElements !== "undefined" && Boolean(customElements.get("ha-selector"))
+    };
+
     handleValueChanged = (event) => {
         this.props.onValueChanged(event.detail.value);
     };
 
+    handleFallbackChanged = (event) => {
+        const numberConfig = this.props.selector?.number;
+        this.props.onValueChanged(numberConfig ? Number(event.target.value) : event.target.value);
+    };
+
     componentDidMount() {
-        this.elementRef.current!.addEventListener("value-changed", this.handleValueChanged);
+        const {hasNativeHaSelector} = this.state;
+
+        if (!hasNativeHaSelector && typeof customElements !== "undefined") {
+            customElements.whenDefined("ha-selector")
+                .then(() => this.setState({hasNativeHaSelector: true}))
+                .catch(() => undefined);
+        }
+
+        if (this.elementRef.current) {
+            this.elementRef.current.addEventListener("value-changed", this.handleValueChanged);
+        }
     }
 
     componentWillUnmount() {
-        this.elementRef.current!.removeEventListener("value-changed", this.handleValueChanged);
+        if (this.elementRef.current) {
+            this.elementRef.current.removeEventListener("value-changed", this.handleValueChanged);
+        }
     }
 
     render() {
+        if (!this.state.hasNativeHaSelector) {
+            const numberConfig = this.props.selector?.number;
+
+            return (
+                <input
+                    type={numberConfig ? "number" : "text"}
+                    value={this.props.value ?? ""}
+                    min={numberConfig?.min}
+                    max={numberConfig?.max}
+                    onChange={this.handleFallbackChanged}
+                />
+            );
+        }
+
         return (
             <ha-selector
                 ref={this.elementRef}

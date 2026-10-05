@@ -10,5 +10,8 @@ export type Preset = {
     name: string,
     img: string,
     bri: number,
+    effect?: string,
+    kelvin?: number,
+    white?: number,
     lights: Array<{x: number, y: number}>
 }

@@ -19,8 +19,17 @@ export const DynamicSceneTile :React.FunctionComponent<{
     return (
         <div
             className={"tile"}
+            role={"button"}
+            tabIndex={0}
+            aria-label={`Stop ${name}`}
             onClick={() => {
                 onClick?.(id);
+            }}
+            onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onClick?.(id);
+                }
             }}
         >
             <div
@@ -31,6 +40,7 @@ export const DynamicSceneTile :React.FunctionComponent<{
 
                         <img
                             src={imgSrc}
+                            alt={name}
                             className={"tile-bg-img"}
                         />
                         :

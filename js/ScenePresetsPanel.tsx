@@ -1,19 +1,18 @@
-// @ts-nocheck
 // noinspection JSUnusedGlobalSymbols
 
-import {Container} from "react-dom";
 import {App} from "./App";
 import {createRoot, Root} from "react-dom/client";
 import {loadConfigDashboard} from "./helpers";
+import {logWarning} from "./log";
 
 class ScenePresetsPanel extends HTMLElement {
     initialized: boolean = false;
-    shadow: Container;
+    shadow!: ShadowRoot;
     _hass: any;
     private _narrow: boolean = false;
-    private root: Root;
-    private styleElem: HTMLStyleElement;
-    private container: HTMLDivElement;
+    private root!: Root;
+    private styleElem!: HTMLStyleElement;
+    private container!: HTMLDivElement;
 
     constructor() {
         super();
@@ -141,9 +140,7 @@ class ScenePresetsPanel extends HTMLElement {
 
         this.root = createRoot(this.container);
 
-        this.initialize().then(() => {
-            console.log("dependencies loaded");
-
+        this.initialize().finally(() => {
             this.initialized = true;
         });
     }
@@ -178,7 +175,11 @@ class ScenePresetsPanel extends HTMLElement {
     async initialize() {
         this.prefetchLabels().catch(() => {/* can't happen */}); // Without this, the pickers can get unhappy sometimes
 
-        await loadConfigDashboard();
+        try {
+            await loadConfigDashboard();
+        } catch (error) {
+            logWarning("failed to initialize", error);
+        }
     }
 
     private prefetchLabels(): Promise<void> {
