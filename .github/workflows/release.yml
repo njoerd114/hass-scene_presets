@@ -87,6 +87,26 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          set -euo pipefail
+
+          PREV=$(git tag --sort=-creatordate | grep -vx "${VERSION}" | head -1 || true)
+
+          {
+            echo "## What's Changed"
+            echo
+            if [ -n "${PREV}" ]; then
+              RANGE="${PREV}..HEAD"
+            else
+              RANGE="HEAD"
+            fi
+            git log "${RANGE}" --no-merges --pretty=format:"- %s (%h)" | grep -v "chore: Release" || true
+            echo
+            echo
+            if [ -n "${PREV}" ]; then
+              echo "**Full Changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/${PREV}...${VERSION}"
+            fi
+          } > RELEASE_NOTES.md
+
           gh release create "${VERSION}" \
             --title "${VERSION}" \
-            --generate-notes
+            --notes-file RELEASE_NOTES.md
