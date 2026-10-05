@@ -513,9 +513,14 @@ export const PresetApplyPage: React.FunctionComponent<{
 
                 brightness: customBrightness ? customBrightnessValue : undefined,
                 effect: customEffect && effectValue ? effectValue : undefined,
-                distribution: distribution,
-                transition_style: transitionStyle,
             };
+
+            if (distribution && distribution !== "sequence") {
+                payload.distribution = distribution;
+            }
+            if (transitionStyle && transitionStyle !== "fade") {
+                payload.transition_style = transitionStyle;
+            }
             let service: string;
 
             if (dynamic) {
