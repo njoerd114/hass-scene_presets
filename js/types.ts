@@ -13,5 +13,6 @@ export type Preset = {
     effect?: string,
     kelvin?: number,
     white?: number,
+    custom?: boolean,
     lights: Array<{x: number, y: number}>
 }

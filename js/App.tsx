@@ -35,23 +35,21 @@ export const App : React.FunctionComponent<{
     const [categories, setCategories] = useSessionStorage<Array<Category>>("scene_presets_categories",[]);
     const [presets, setPresets] = useSessionStorage<Array<Preset>>("scene_presets_presets",[]);
 
+    const reloadData = React.useCallback(async () => {
+        try {
+            const response = await fetch("/assets/scene_presets/scene_presets.json");
+            const data = await response.json();
+
+            setCategories(data.categories);
+            setPresets(data.presets);
+        } catch (error) {
+            logError("failed to fetch preset data", error);
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await fetch("/assets/scene_presets/scene_presets.json");
-                const data = await response.json();
-
-                setCategories(data.categories);
-                setPresets(data.presets);
-            } catch (error) {
-                logError("failed to fetch preset data", error);
-            }
-        };
-
-        fetchData().then(() => {
-            /* intentional */
-        });
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps 
+        reloadData();
+    }, [reloadData]);
 
     return (
         <ha-top-app-bar-fixed>
@@ -67,6 +65,7 @@ export const App : React.FunctionComponent<{
 
                 categories={categories}
                 presets={presets}
+                onDataChanged={reloadData}
             />
         </ha-top-app-bar-fixed>
     );

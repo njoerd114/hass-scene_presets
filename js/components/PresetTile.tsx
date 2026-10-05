@@ -11,6 +11,7 @@ export const PresetTile :React.FunctionComponent<{
 
     onFavClick?: (name: string) => void
     isFav?: boolean
+    onDelete?: (name: string) => void
 }> = ({
     id,
     name,
@@ -19,7 +20,8 @@ export const PresetTile :React.FunctionComponent<{
     onClick,
 
     onFavClick,
-    isFav
+    isFav,
+    onDelete
 }): React.JSX.Element => {
     const preview = colors && colors.length > 0
         ? `linear-gradient(135deg, ${colors.map((color) => xyToCssColor(color.x, color.y)).join(", ")})`
@@ -70,6 +72,27 @@ export const PresetTile :React.FunctionComponent<{
                     {
                         isFav ? favedIcon : unFavedIcon
                     }
+                </div>
+            }
+
+            {
+                onDelete &&
+                <div
+                    className={"tile-top-icon-container"}
+                    style={{left: "10px", right: "auto"}}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                    }}
+                >
+                    <HaIconButton
+                        icon={"mdi:trash-can-outline"}
+                        onClick={() => {
+                            onDelete(id);
+                        }}
+
+                        size={28}
+                        iconSize={24}
+                    />
                 </div>
             }
 

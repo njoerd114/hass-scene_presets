@@ -77,3 +77,12 @@ export const xyToCssColor = (x: number, y: number): string => {
 
     return `rgb(${_gamma(red)}, ${_gamma(green)}, ${_gamma(blue)})`;
 };
+
+export const presetImageUrl = (preset: {img?: string; custom?: boolean}): string | undefined => {
+    if (!preset?.img) {
+        return undefined;
+    }
+
+    const base = preset.custom ? "/assets/scene_presets/custom/" : "/assets/scene_presets/";
+    return base + preset.img;
+};

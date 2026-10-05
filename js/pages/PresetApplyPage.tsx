@@ -12,6 +12,8 @@ import HaDialog from "../components/hass/building_blocks/HaDialog";
 import MwcButton from "../components/hass/building_blocks/MwcButton";
 import {DynamicSceneTile} from "../components/DynamicSceneTile";
 import {CategoryTiles} from "../components/CategoryTiles";
+import {PresetEditor} from "../components/PresetEditor";
+import {presetImageUrl} from "../helpers";
 
 const DEFAULT_TUNABLE_SETTINGS = {
     shuffle: false,
@@ -272,10 +274,12 @@ export const PresetApplyPage: React.FunctionComponent<{
     hass: any,
     categories: Array<Category>,
     presets: Array<Preset>,
+    onDataChanged: () => void,
 }> = ({
     hass,
     categories,
-    presets
+    presets,
+    onDataChanged
 }): React.JSX.Element => {
     const [targets, setTargets] = useLocalStorage<HaTargetSelectorValue>("scene_presets_apply_page_targets", {});
 
@@ -305,6 +309,7 @@ export const PresetApplyPage: React.FunctionComponent<{
     const [distribution, setDistribution] = useLocalStorage<string>("scene_presets_apply_page_distribution", "sequence");
     const [transitionStyle, setTransitionStyle] = useLocalStorage<string>("scene_presets_apply_page_transition_style", "fade");
     const [effectPresets, setEffectPresets] = useState<Array<Preset>>([]);
+    const [editorOpen, setEditorOpen] = useState<boolean>(false);
 
 
     const [favoritePresets, setFavoritePresets] = useLocalStorage<Array<string>>("scene_presets_apply_page_favorite_presets", []);
@@ -606,6 +611,26 @@ export const PresetApplyPage: React.FunctionComponent<{
         [hass, targets, hasTargets, customBrightness, customBrightnessValue, localize]
     );
 
+    const handleDeletePreset = React.useCallback(
+        (id: string) => {
+            if (!window.confirm("Delete this preset?")) {
+                return;
+            }
+
+            hass.callWS({type: "scene_presets/delete_preset", preset_id: id})
+                .then(() => {
+                    setStatusMessage(localize("status.deleted", "Preset deleted."));
+                    setStatusIsError(false);
+                    onDataChanged();
+                })
+                .catch((error) => {
+                    setStatusMessage(error?.message || localize("status.failed", "Failed to apply the preset."));
+                    setStatusIsError(true);
+                });
+        },
+        [hass, localize, onDataChanged]
+    );
+
     const handleDynamicSceneTap = React.useCallback(
         (id: string) => {
             hass.callService(
@@ -646,7 +671,7 @@ export const PresetApplyPage: React.FunctionComponent<{
             allTiles[preset.id] = <PresetTile
                 id={preset.id}
                 name={preset.name}
-                imgSrc={preset.img ? "/assets/scene_presets/" + preset.img : undefined}
+                imgSrc={presetImageUrl(preset)}
                 colors={preset.lights}
                 onClick={(id) => {
                     handlePresetTap(id);
@@ -659,6 +684,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                         setFavoritePresets(favoritePresets.filter(e => e !== preset.id));
                     }
                 }}
+                onDelete={preset.custom ? handleDeletePreset : undefined}
             />;
 
             if (isFav) {
@@ -670,7 +696,7 @@ export const PresetApplyPage: React.FunctionComponent<{
             all: allTiles,
             favoriteIds: favoriteTiles,
         };
-    }, [presets, favoritePresets, handlePresetTap, setFavoritePresets]);
+    }, [presets, favoritePresets, handlePresetTap, setFavoritePresets, handleDeletePreset]);
 
     const presetMap = useMemo(() => {
         const _presetMap = {};
@@ -1001,6 +1027,17 @@ export const PresetApplyPage: React.FunctionComponent<{
                     />
                 </div>
 
+                <div
+                    style={{
+                        marginTop: "0.75rem"
+                    }}
+                >
+                    <MwcButton
+                        label={localize("ui.create_preset", "Create preset")}
+                        onClick={() => setEditorOpen(true)}
+                    />
+                </div>
+
                 {
                     dynamicSceneIds.length > 0 &&
                     <div
@@ -1025,7 +1062,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                                     const preset = presetMap[dynamicScenes[id]?.preset_id];
 
                                     const name = preset?.name ?? "Unknown Preset";
-                                    const imgSrc = preset?.img ? "/assets/scene_presets/" + preset.img : undefined;
+                                    const imgSrc = preset ? presetImageUrl(preset) : undefined;
 
                                     return <DynamicSceneTile
                                         key={"active_dynamic_scene_" + id}
@@ -1135,6 +1172,16 @@ export const PresetApplyPage: React.FunctionComponent<{
                             }
                         </div>
                     </div>
+                }
+
+                {
+                    editorOpen &&
+                    <PresetEditor
+                        hass={hass}
+                        categories={categories}
+                        onClose={() => setEditorOpen(false)}
+                        onSaved={onDataChanged}
+                    />
                 }
 
                 <HaDialog
