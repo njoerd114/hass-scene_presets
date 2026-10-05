@@ -22,6 +22,12 @@
 .env.test.local
 .env.production.local
 
+# integration runtime user data (custom presets)
+custom_components/scene_presets/userdata/
+
+# agent orchestration state
+.omo/
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
