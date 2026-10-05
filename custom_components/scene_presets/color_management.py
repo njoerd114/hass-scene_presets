@@ -73,3 +73,13 @@ def get_randomized_colors(options: List[Tuple[float, float]], total: int) -> Lis
     colors = colors[:total]
 
     return colors
+
+
+def assign_colors(options: List[Tuple[float, float]], total: int, mode: str = "sequence") -> List[Tuple[float, float]]:
+    if mode == "random":
+        return [get_random_color(options) for _ in range(total)]
+
+    if mode == "balanced":
+        return get_randomized_colors(options, total)
+
+    return [get_next_color(index, options) for index in range(total)]
