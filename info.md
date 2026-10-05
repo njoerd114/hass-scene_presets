@@ -4,6 +4,8 @@ Hue-like scene presets for Home Assistant — no Hue bridge, no vendor lock-in, 
 
 Scene Presets lets you save and apply colour presets to **any** `light` entity and exposes them through a sidebar panel and services, so they can be used in dashboards, automations, scripts and voice commands.
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=njoerd114&repository=hass-scene_presets&category=integration)
+
 ## Features
 
 - **Any light**: apply colour presets to any colour-capable light, with automatic fallback to colour temperature or brightness-only lights.
@@ -15,8 +17,16 @@ Scene Presets lets you save and apply colour presets to **any** `light` entity a
 - **Server-side sync** of favourites, targets and tunables across devices.
 - Fully local: no cloud, no account.
 
-## Usage
+## Installation
 
-Install via HACS, restart Home Assistant, then add the integration from **Settings → Devices & Services**. Presets can be applied from the **Scene Presets** sidebar panel or through the `scene_presets` services.
+1. Click the button above, or add `https://github.com/njoerd114/hass-scene_presets` to **HACS → ⋮ → Custom repositories** as an **Integration**.
+2. Install **Scene Presets** from HACS and **restart Home Assistant**.
+3. Add it from **Settings → Devices & Services → Add integration → Scene Presets**.
 
-See the [README](https://github.com/njoerd114/hass-scene_presets#readme) and the [docs](https://github.com/njoerd114/hass-scene_presets/tree/master/docs) for details.
+Requires Home Assistant **2026.7.0** or newer.
+
+## Documentation
+
+- [README](https://github.com/njoerd114/hass-scene_presets#readme)
+- [Custom presets](https://github.com/njoerd114/hass-scene_presets/blob/master/docs/Custom%20Presets.md)
+- [Report an issue](https://github.com/njoerd114/hass-scene_presets/issues)
