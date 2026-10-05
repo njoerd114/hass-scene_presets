@@ -1,7 +1,9 @@
 {
     "domain": "scene_presets",
     "name": "Scene Presets",
-    "after_dependencies": ["http"],
+    "after_dependencies": [
+        "http"
+    ],
     "codeowners": [
         "@njoerd114"
     ],
@@ -11,5 +13,5 @@
     "iot_class": "calculated",
     "issue_tracker": "https://github.com/njoerd114/hass-scene_presets/issues",
     "requirements": [],
-    "version": "2.4.0"
+    "version": "2026.10.1"
 }
