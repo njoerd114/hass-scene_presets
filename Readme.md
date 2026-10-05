@@ -86,6 +86,14 @@ This will then open a dialog that looks like this with a copy-pasteable service 
 For advanced usage, use the Home Assistant DevTools and call the services provided by the custom_component directly.<br/>
 Preset IDs can be found in the overview here: [assets](./custom_components/scene_presets/assets/Readme.md)
 
+Beyond applying presets, the integration exposes services for:
+- `apply_random_preset` - apply a random preset, optionally limited to a category
+- `start_circadian` / `stop_circadian` - adapt color temperature and brightness to the sun
+- `generate_effect_presets` - turn every light effect of the given entities into presets
+- `export_presets` / `import_presets` - move custom presets between instances via JSON or a share code
+
+Favorites, targets and tunables can optionally be synced on the server, so they are shared across browsers and devices.
+
 If you're a developer, you can also add your own presets by creating a json file.<br/>
 Check the [docs page on that](./docs/Custom%20Presets.md) for more info.
 

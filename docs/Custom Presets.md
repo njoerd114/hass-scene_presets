@@ -103,8 +103,117 @@ To fix that, we need to change the preset to include an `img` key like this:
 This will now point to `userdata/custom/assets/1d2ef59e-8f29-4d58-a437-c0b03d90ce8a.jpeg`.<br/>
 Make sure to place the desired image there.
 
-And that's it. When in doubt, take a look at the `presets.json` and `assets` included with the component.<br/>
-As said, they are the same format and structure.
+## Effects
+
+Presets may optionally define an `effect`, which is applied to any target light that supports it (for example WLED).<br/>
+The value has to match one of the light's `effect_list` entries, otherwise it is ignored for that light.
+
+```
+    {
+      "id": "1d2ef59e-8f29-4d58-a437-c0b03d90ce8a",
+      "categoryId": "e0c17262-f84b-4943-bdd5-fcd24c574f24",
+      "name": "WLED Rainbow",
+      "effect": "Rainbow",
+      "bri": 200,
+      "lights": [
+        {
+          "x": 0.6264,
+          "y": 0.3632
+        }
+      ]
+    }
+```
+
+For a light that does not support effects, the preset still applies its color/brightness as usual.<br/>
+The UI also exposes a `Custom Effect` override in the tunables section whenever the selected targets report any effects.
+
+## WLED presets
+
+A preset may also reference a saved WLED preset by name using `wled_preset`.<br/>
+When applied to a WLED light, the `select` entity of the same device is set to that preset.
+
+```
+    {
+      "id": "1d2ef59e-8f29-4d58-a437-c0b03d90ce8a",
+      "categoryId": "e0c17262-f84b-4943-bdd5-fcd24c574f24",
+      "name": "WLED Christmas",
+      "wled_preset": "Christmas",
+      "bri": 200,
+      "lights": [
+        {
+          "x": 0.6264,
+          "y": 0.3632
+        }
+      ]
+    }
+```
+
+It is only applied when the device offers a preset with that exact name; otherwise it is ignored.<br/>
+If a preset defines both `effect` and `wled_preset`, the WLED preset wins on WLED devices.
+
+## WLED palette, speed and intensity
+
+A preset may further define `wled_palette`, `wled_speed` (0-255) and `wled_intensity` (0-255).<br/>
+These are applied to the matching `select`/`number` entities of the same WLED segment that the target light belongs to.
+
+```
+    {
+      "id": "1d2ef59e-8f29-4d58-a437-c0b03d90ce8a",
+      "categoryId": "e0c17262-f84b-4943-bdd5-fcd24c574f24",
+      "name": "WLED Fire",
+      "effect": "Fire 2012",
+      "wled_palette": "Fire",
+      "wled_speed": 128,
+      "wled_intensity": 192,
+      "bri": 200,
+      "lights": [
+        {
+          "x": 0.6264,
+          "y": 0.3632
+        }
+      ]
+    }
+```
+
+## Color temperature and white channel
+
+Instead of deriving a color temperature from the preset color, a preset may pin a `kelvin` value.<br/>
+It is used for lights that support `color_temp` rather than an xy color mode.<br/>
+For RGBW/RGBWW lights, a preset may also define a `white` channel (0-255) which is sent as `rgbw_color`/`rgbww_color`.
+
+## Distribution and transition
+
+A preset or service call may define `distribution` to control how preset colors are assigned to targets:
+- `sequence` (default) - repeat the preset colors in order
+- `balanced` - ensure every preset color is used before repeating
+- `random` - pick a random color per target
+
+`transition_style` controls the fade: `fade` (default, uses the transition duration) or `instant` (no fade).<br/>
+Note that Home Assistant's light transition supports a duration only; arbitrary easing curves are not available.
+
+## Scene entities
+
+By adding an optional `targets` object to a preset, the integration also exposes it as a native Home Assistant
+`scene` entity. Activating that scene applies the preset to the configured targets.
+
+```
+    {
+      "id": "1d2ef59e-8f29-4d58-a437-c0b03d90ce8a",
+      "categoryId": "e0c17262-f84b-4943-bdd5-fcd24c574f24",
+      "name": "Evening",
+      "icon": "mdi:weather-night",
+      "targets": {
+        "entity_id": "light.living_room"
+      },
+      "bri": 120,
+      "lights": [
+        {
+          "x": 0.5264,
+          "y": 0.4132
+        }
+      ]
+    }
+```
 
 ## Misc
 
