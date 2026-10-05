@@ -1,0 +1,54 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Scene Presets",
+        "description": "Set up Scene Presets."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Already configured. Only a single instance is allowed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Scene Presets",
+        "data": {
+          "enable_server_sync": "Sync favorites, targets and tunables on the server",
+          "scene_targets": "Default targets for scene entities"
+        }
+      }
+    }
+  },
+  "ui": {
+    "targets": "Targets",
+    "tunables": "Tunables",
+    "dynamic": "Dynamic",
+    "shuffle": "Shuffle Colors",
+    "smart_shuffle": "Smart Shuffle",
+    "interval": "Interval",
+    "transition": "Transition",
+    "custom_brightness": "Custom Brightness",
+    "custom_transition": "Custom Transition",
+    "custom_effect": "Custom Effect",
+    "dynamic_scenes": "Dynamic scenes",
+    "favorites": "Favorites",
+    "last_action": "Last action payload",
+    "distribution": "Distribution",
+    "transition_style": "Transition style",
+    "wled_effects": "WLED Effects"
+  },
+  "status": {
+    "applying": "Applying…",
+    "applied": "Preset applied.",
+    "failed": "Failed to apply the preset.",
+    "no_targets": "Select at least one target before applying a preset.",
+    "sync_unavailable": "Server sync unavailable; using local storage.",
+    "sync_failed": "Failed to sync preferences.",
+    "dynamic_conflict": "Overlapping dynamic scenes were stopped."
+  },
+  "search": {
+    "placeholder": "Search presets"
+  }
+}

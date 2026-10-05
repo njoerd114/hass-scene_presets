@@ -48,6 +48,167 @@ apply_preset:
       example: true
       selector:
         boolean:
+    distribution:
+      name: "Distribution"
+      description: "How preset colors are assigned to targets"
+      selector:
+        select:
+          options:
+            - "sequence"
+            - "balanced"
+            - "random"
+    transition_style:
+      name: "Transition style"
+      description: "fade (uses transition duration) or instant (no fade)"
+      selector:
+        select:
+          options:
+            - "fade"
+            - "instant"
+            - "ease_in"
+            - "ease_out"
+            - "ease_in_out"
+    effect:
+      name: "Effect"
+      description: "Override the light effect to apply. Only used by lights that support effects (e.g. WLED)."
+      example: "Rainbow"
+      selector:
+        text: null
+    wled_preset:
+      name: "WLED preset"
+      description: "Name of a saved WLED preset to activate on the target device."
+      example: "My Preset"
+      selector:
+        text: null
+    wled_palette:
+      name: "WLED palette"
+      description: "WLED color palette to apply to the target segments."
+      example: "Rainbow"
+      selector:
+        text: null
+    wled_speed:
+      name: "WLED speed"
+      description: "WLED effect speed (0-255)."
+      example: 128
+      selector:
+        number:
+          min: 0
+          max: 255
+    wled_intensity:
+      name: "WLED intensity"
+      description: "WLED effect intensity (0-255)."
+      example: 128
+      selector:
+        number:
+          min: 0
+          max: 255
+
+apply_effect:
+  name: "Apply effect"
+  description: Apply a light effect to the given targets, for example a WLED effect
+  fields:
+    targets:
+      name: "Targets"
+      description: "Which lights to apply the effect to"
+      required: true
+      selector:
+        target:
+          entity:
+            domain:
+              - light
+    effect:
+      name: "Effect"
+      description: "The effect name to apply"
+      example: "Rainbow"
+      required: true
+      selector:
+        text: null
+    brightness:
+      name: "Brightness"
+      example: 200
+      selector:
+        number:
+          min: 0
+          max: 255
+    transition:
+      name: "Transition"
+      description: "Transition duration"
+      example: 1
+      selector:
+        number:
+          min: 0
+          max: 300
+          unit_of_measurement: seconds
+
+apply_random_preset:
+  name: "Apply random preset"
+  description: Apply a random scene preset, optionally limited to one category
+  fields:
+    targets:
+      name: "Targets"
+      description: "What to apply the preset to"
+      required: true
+      selector:
+        target:
+          entity:
+            domain:
+              - light
+              - group
+    category_id:
+      name: "Category"
+      description: "Only pick presets from this category. Leave empty to pick from all presets."
+      example: "e0c17262-f84b-4943-bdd5-fcd24c574f24"
+      selector:
+        text: null
+    brightness:
+      name: "Brightness"
+      description: "Override the presets brightness"
+      example: 150
+      selector:
+        number:
+          min: 0
+          max: 255
+    transition:
+      name: "Transition"
+      description: "Transition duration between states"
+      example: 1
+      selector:
+        number:
+          min: 0
+          max: 300
+          unit_of_measurement: seconds
+    shuffle:
+      name: "Shuffle"
+      description: "Shuffle the colors before applying"
+      example: true
+      selector:
+        boolean:
+    smart_shuffle:
+      name: "Smart shuffle"
+      description: "Ensure smooth color transitions when shuffling"
+      example: true
+      selector:
+        boolean:
+    distribution:
+      name: "Distribution"
+      description: "How preset colors are assigned to targets"
+      selector:
+        select:
+          options:
+            - "sequence"
+            - "balanced"
+            - "random"
+    transition_style:
+      name: "Transition style"
+      description: "fade (uses transition duration) or instant (no fade)"
+      selector:
+        select:
+          options:
+            - "fade"
+            - "instant"
+            - "ease_in"
+            - "ease_out"
+            - "ease_in_out"
 
 get_dynamic_scenes:
   name: "Get dynamic scenes"
@@ -97,9 +258,63 @@ start_dynamic_scene:
       example: 60
       selector:
         number:
-          min: 0
+          min: 1
           max: 300
           unit_of_measurement: seconds
+    distribution:
+      name: "Distribution"
+      description: "How preset colors are assigned to targets"
+      selector:
+        select:
+          options:
+            - "sequence"
+            - "balanced"
+            - "random"
+    transition_style:
+      name: "Transition style"
+      description: "fade (uses transition duration) or instant (no fade)"
+      selector:
+        select:
+          options:
+            - "fade"
+            - "instant"
+            - "ease_in"
+            - "ease_out"
+            - "ease_in_out"
+    effect:
+      name: "Effect"
+      description: "Override the light effect to apply. Only used by lights that support effects (e.g. WLED)."
+      example: "Rainbow"
+      selector:
+        text: null
+    wled_preset:
+      name: "WLED preset"
+      description: "Name of a saved WLED preset to activate on the target device."
+      example: "My Preset"
+      selector:
+        text: null
+    wled_palette:
+      name: "WLED palette"
+      description: "WLED color palette to apply to the target segments."
+      example: "Rainbow"
+      selector:
+        text: null
+    wled_speed:
+      name: "WLED speed"
+      description: "WLED effect speed (0-255)."
+      example: 128
+      selector:
+        number:
+          min: 0
+          max: 255
+    wled_intensity:
+      name: "WLED intensity"
+      description: "WLED effect intensity (0-255)."
+      example: 128
+      selector:
+        number:
+          min: 0
+          max: 255
 
 stop_dynamic_scene:
   name: "Stop dynamic scene"
@@ -131,3 +346,120 @@ stop_dynamic_scenes_for_targets:
 stop_all_dynamic_scenes:
   name: "Stop all dynamic scenes"
   description: Stops all currently running dynamic scenes
+
+export_presets:
+  name: "Export presets"
+  description: Export all custom presets as JSON plus a shareable code
+
+import_presets:
+  name: "Import presets"
+  description: Import custom presets from JSON or a share code
+  fields:
+    payload:
+      name: "Payload"
+      description: "Custom presets as JSON or a share code"
+      example: '{"presets": []}'
+      required: true
+      selector:
+        text:
+          multiline: true
+
+generate_effect_presets:
+  name: "Generate effect presets"
+  description: Create presets for every light effect reported by the given entities
+  fields:
+    entity_id:
+      name: "Entities"
+      description: "Effect-capable light entities (e.g. WLED) to read effects from"
+      example: "light.wled"
+      required: true
+      selector:
+        entity:
+          domain:
+            - light
+          multiple: true
+
+start_circadian:
+  name: "Start circadian lighting"
+  description: Continuously adapt color temperature and brightness to the sun position
+  fields:
+    targets:
+      name: "Targets"
+      description: "Which lights to adapt"
+      required: true
+      selector:
+        target:
+          entity:
+            domain:
+              - light
+              - group
+    min_kelvin:
+      name: "Minimum Kelvin"
+      description: "Warmest color temperature at the horizon"
+      example: 3000
+      selector:
+        number:
+          min: 1000
+          max: 10000
+    max_kelvin:
+      name: "Maximum Kelvin"
+      description: "Coolest color temperature at solar noon"
+      example: 6500
+      selector:
+        number:
+          min: 1000
+          max: 10000
+    sleep_kelvin:
+      name: "Sleep Kelvin"
+      description: "Color temperature in deep night"
+      example: 1900
+      selector:
+        number:
+          min: 1000
+          max: 10000
+    min_brightness:
+      name: "Minimum brightness %"
+      example: 1
+      selector:
+        number:
+          min: 0
+          max: 100
+    max_brightness:
+      name: "Maximum brightness %"
+      example: 100
+      selector:
+        number:
+          min: 0
+          max: 100
+    interval:
+      name: "Interval"
+      description: "How often to re-apply"
+      example: 60
+      selector:
+        number:
+          min: 5
+          max: 3600
+          unit_of_measurement: seconds
+
+stop_circadian:
+  name: "Stop circadian lighting"
+  description: Stops the circadian lighting loop
+
+set_schedule:
+  name: "Set schedule"
+  description: Schedule presets to be applied at specific times
+  fields:
+    schedule:
+      name: "Schedule"
+      description: "List of entries: {id, time: HH:MM, days?, preset_id, targets, brightness?, transition?}"
+      required: true
+      selector:
+        object:
+
+clear_schedule:
+  name: "Clear schedule"
+  description: Remove all scheduled presets
+
+get_schedule:
+  name: "Get schedule"
+  description: Return all scheduled presets

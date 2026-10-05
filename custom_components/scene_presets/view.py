@@ -1,5 +1,6 @@
 from .const import NAME, DOMAIN, PANEL_URL
 from .file_utils import VERSION, PRESET_DATA, BASE_PATH
+from homeassistant.core import HomeAssistant
 from homeassistant.components.http import HomeAssistantView, StaticPathConfig
 from homeassistant.components.frontend import async_remove_panel, async_register_built_in_panel
 
@@ -23,14 +24,16 @@ class ScenePresetDataView(HomeAssistantView):
         )
 
 async def async_setup_view(hass):
-    static_paths = [
-        StaticPathConfig(PANEL_URL, hass.config.path(f'{BASE_PATH}/frontend/scene_presets_panel.js'), True),
-        StaticPathConfig(f'/assets/{DOMAIN}/iconset.js', hass.config.path(f'{BASE_PATH}/res/iconset.js'), True)
-    ]
-    
-    static_paths.extend(await get_preset_image_paths(hass))
+    if not hass.data.setdefault(DOMAIN, {}).get("static_paths_registered"):
+        static_paths = [
+            StaticPathConfig(PANEL_URL, hass.config.path(f'{BASE_PATH}/frontend/scene_presets_panel.js'), True),
+            StaticPathConfig(f'/assets/{DOMAIN}/iconset.js', hass.config.path(f'{BASE_PATH}/res/iconset.js'), True)
+        ]
 
-    await hass.http.async_register_static_paths(static_paths)
+        static_paths.extend(await get_preset_image_paths(hass))
+
+        await hass.http.async_register_static_paths(static_paths)
+        hass.data[DOMAIN]["static_paths_registered"] = True
 
     hass.http.register_view(ScenePresetDataView)
     add_extra_js_url(hass, f"/assets/{DOMAIN}/iconset.js?{VERSION}")
@@ -42,6 +45,7 @@ async def async_setup_view(hass):
         sidebar_icon="scene_presets:scene_presets",
         frontend_url_path="scene_presets",
         require_admin=False,
+        update=True,
         config={
             "_panel_custom": {
                 "name": "scene-presets-panel",
@@ -52,7 +56,7 @@ async def async_setup_view(hass):
     )
 
 async def async_remove_view(hass):
-    async_remove_panel(hass, "scene_presets")
+    async_remove_panel(hass, "scene_presets", warn_if_unknown=False)
 
 async def get_preset_image_paths(hass):
     static_paths = []
