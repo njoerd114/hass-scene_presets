@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: ${{ !contains(github.event.head_commit.message, '[skip release]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute next version
+        id: version
+        run: |
+          set -euo pipefail
+
+          if git describe --tags --exact-match HEAD >/dev/null 2>&1; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "HEAD is already tagged; nothing to release."
+            exit 0
+          fi
+
+          YEAR=$(date -u +%Y)
+          MONTH=$(date -u +%m | sed 's/^0//')
+          BASE="${YEAR}.${MONTH}"
+
+          LATEST=$(git tag --list "${BASE}.*" | sort -t. -k3 -n | tail -1)
+          if [ -n "$LATEST" ]; then
+            PATCH=$(( ${LATEST##*.} + 1 ))
+          else
+            PATCH=0
+          fi
+
+          VERSION="${BASE}.${PATCH}"
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Next version: ${VERSION}"
+
+      - name: Bump manifest version
+        if: steps.version.outputs.should_release == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python3 - "$VERSION" <<'PY'
+          import json
+          import sys
+
+          path = "custom_components/scene_presets/manifest.json"
+          with open(path, encoding="utf-8") as handle:
+              manifest = json.load(handle)
+          manifest["version"] = sys.argv[1]
+          with open(path, "w", encoding="utf-8") as handle:
+              json.dump(manifest, handle, indent=4)
+              handle.write("\n")
+          PY
+
+      - name: Commit, tag, and push
+        if: steps.version.outputs.should_release == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add custom_components/scene_presets/manifest.json
+          git commit -m "chore: Release ${VERSION} [skip release]"
+          git push
+          git tag "${VERSION}"
+          git push origin "${VERSION}"
+
+      - name: Create GitHub release
+        if: steps.version.outputs.should_release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "${VERSION}" \
+            --title "${VERSION}" \
+            --generate-notes
