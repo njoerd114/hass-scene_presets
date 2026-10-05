@@ -3,13 +3,13 @@
     "name": "Scene Presets",
     "after_dependencies": ["http"],
     "codeowners": [
-        "@hypfer"
+        "@njoerd114"
     ],
     "config_flow": true,
-    "documentation": "https://github.com/Hypfer/hass-scene_presets",
+    "documentation": "https://github.com/njoerd114/hass-scene_presets",
     "integration_type": "service",
     "iot_class": "calculated",
-    "issue_tracker": "https://github.com/Hypfer/hass-scene_presets/issues",
+    "issue_tracker": "https://github.com/njoerd114/hass-scene_presets/issues",
     "requirements": [],
     "version": "2.4.0"
 }

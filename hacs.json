@@ -1,5 +1,6 @@
 {
-  "name": "Scene presets",
+  "name": "Scene Presets",
   "persistent_directory": "userdata",
-  "homeassistant": "2026.7.0"
+  "homeassistant": "2026.7.0",
+  "render_readme": true
 }
