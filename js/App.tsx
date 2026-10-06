@@ -37,7 +37,7 @@ export const App : React.FunctionComponent<{
 
     const reloadData = React.useCallback(async () => {
         try {
-            const response = await fetch("/assets/scene_presets/scene_presets.json");
+            const response = await fetch("/assets/scene_presets/scene_presets.json?t=" + Date.now());
             const data = await response.json();
 
             setCategories(data.categories);

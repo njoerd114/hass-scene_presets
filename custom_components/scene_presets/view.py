@@ -26,6 +26,7 @@ class ScenePresetDataView(HomeAssistantView):
     async def get(self, request):
         return self.json(
             result=PRESET_DATA,
+            headers={"cache-control": "no-store"},
         )
 
 
