@@ -13,7 +13,8 @@ import {
     rgbToHex,
 } from "../colors";
 
-const MAX_IMAGE_DIMENSION = 512;
+const TARGET_WIDTH = 904;
+const TARGET_HEIGHT = 512;
 
 type Mode = "manual" | "image" | "generator";
 
@@ -81,10 +82,10 @@ export const PresetEditor :React.FunctionComponent<{
     const [palettes, setPalettes] = useState<Array<GeneratedPalette>>([]);
     const [extractedColors, setExtractedColors] = useState<Array<string>>([]);
     const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
-    const [saving, setSaving] = useState<boolean>(false);
-    const [error, setError] = useState<string>("");
     const [effect, setEffect] = useState<string>("");
     const [wledPreset, setWledPreset] = useState<string>("");
+    const [saving, setSaving] = useState<boolean>(false);
+    const [error, setError] = useState<string>("");
 
     const imageCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -104,34 +105,54 @@ export const PresetEditor :React.FunctionComponent<{
         setColors((current) => (current.includes(hex) ? current.filter((c) => c !== hex) : [...current, hex]));
     };
 
-    const handleImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePicture = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
         const reader = new FileReader();
         reader.onload = () => {
-            const dataUrl = String(reader.result);
             const image = new Image();
             image.onload = () => {
-                const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(image.width, image.height));
+                const targetRatio = TARGET_WIDTH / TARGET_HEIGHT;
+                const sourceRatio = image.width / image.height;
+
+                let sourceX = 0;
+                let sourceY = 0;
+                let sourceWidth = image.width;
+                let sourceHeight = image.height;
+
+                if (sourceRatio > targetRatio) {
+                    sourceWidth = image.height * targetRatio;
+                    sourceX = (image.width - sourceWidth) / 2;
+                } else {
+                    sourceHeight = image.width / targetRatio;
+                    sourceY = (image.height - sourceHeight) / 2;
+                }
+
                 const canvas = document.createElement("canvas");
-                canvas.width = Math.max(1, Math.round(image.width * scale));
-                canvas.height = Math.max(1, Math.round(image.height * scale));
+                canvas.width = TARGET_WIDTH;
+                canvas.height = TARGET_HEIGHT;
 
                 const context = canvas.getContext("2d");
                 if (!context) return;
-                context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-                const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-                const extracted = refinePalette(extractPalette(pixels, 8)).map((color) => rgbToHex(color));
+                context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
 
                 imageCanvasRef.current = canvas;
-                setExtractedColors(extracted);
-                setColors(extracted);
                 setImageDataUrl(canvas.toDataURL("image/jpeg", 0.85));
-                setMode("image");
+
+                const sample = document.createElement("canvas");
+                sample.width = 160;
+                sample.height = Math.round(160 / targetRatio);
+                const sampleContext = sample.getContext("2d");
+                if (sampleContext) {
+                    sampleContext.drawImage(canvas, 0, 0, sample.width, sample.height);
+                    const pixels = sampleContext.getImageData(0, 0, sample.width, sample.height).data;
+                    const extracted = refinePalette(extractPalette(pixels, 8)).map((color) => rgbToHex(color));
+                    setExtractedColors(extracted);
+                    setColors(extracted);
+                }
             };
-            image.src = dataUrl;
+            image.src = String(reader.result);
         };
         reader.readAsDataURL(file);
     };
@@ -167,22 +188,21 @@ export const PresetEditor :React.FunctionComponent<{
             setError("Add at least one colour.");
             return;
         }
+        if (!imageDataUrl) {
+            setError("Please upload a picture to use as the preset tile.");
+            return;
+        }
 
         setSaving(true);
         setError("");
 
         try {
-            let imgFilename: string | undefined;
-
-            if (imageDataUrl) {
-                const content = imageDataUrl.split(",")[1] ?? "";
-                const imageResult = await hass.callWS({
-                    type: "scene_presets/save_preset_image",
-                    filename: `${name.trim()}.jpg`,
-                    content,
-                });
-                imgFilename = imageResult?.filename;
-            }
+            const content = imageDataUrl.split(",")[1] ?? "";
+            const imageResult = await hass.callWS({
+                type: "scene_presets/save_preset_image",
+                filename: `${name.trim()}.jpg`,
+                content,
+            });
 
             const preset: any = {
                 name: name.trim(),
@@ -192,8 +212,8 @@ export const PresetEditor :React.FunctionComponent<{
             if (categoryId) {
                 preset.categoryId = categoryId;
             }
-            if (imgFilename) {
-                preset.img = imgFilename;
+            if (imageResult?.filename) {
+                preset.img = imageResult.filename;
             }
             if (effect.trim()) {
                 preset.effect = effect.trim();
@@ -251,6 +271,21 @@ export const PresetEditor :React.FunctionComponent<{
                     paddingRight: "0.25rem"
                 }}
             >
+                <div>
+                    <span style={labelStyle}>Picture (used as the preset tile)</span>
+                    <input type={"file"} accept={"image/*"} onChange={handlePicture} />
+                    {
+                        imageDataUrl &&
+                        <img
+                            src={imageDataUrl}
+                            alt={"Preset tile"}
+                            onClick={sampleImage}
+                            title={"Click the picture to pick its colour"}
+                            style={{display: "block", width: "100%", marginTop: "0.5rem", borderRadius: "10px", cursor: "crosshair"}}
+                        />
+                    }
+                </div>
+
                 <div>
                     <span style={labelStyle}>Preset colours ({colors.length})</span>
                     <div style={{display: "flex", flexWrap: "wrap", gap: "0.5rem"}}>
@@ -356,7 +391,7 @@ export const PresetEditor :React.FunctionComponent<{
                         />
                         <datalist id={"scene-preset-effects"}>
                             {
-                                availableEffects.map((name) => <option key={name} value={name} />)
+                                availableEffects.map((effectName) => <option key={effectName} value={effectName} />)
                             }
                         </datalist>
                     </label>
@@ -374,7 +409,7 @@ export const PresetEditor :React.FunctionComponent<{
 
                 <div style={{display: "flex", gap: "0.5rem"}}>
                     <button type={"button"} style={tabStyle(mode === "manual")} onClick={() => setMode("manual")}>Manual</button>
-                    <button type={"button"} style={tabStyle(mode === "image")} onClick={() => setMode("image")}>From image</button>
+                    <button type={"button"} style={tabStyle(mode === "image")} onClick={() => setMode("image")}>From picture</button>
                     <button type={"button"} style={tabStyle(mode === "generator")} onClick={() => setMode("generator")}>Generator</button>
                 </div>
 
@@ -395,46 +430,26 @@ export const PresetEditor :React.FunctionComponent<{
                 {
                     mode === "image" &&
                     <div style={{display: "flex", flexDirection: "column", gap: "0.5rem"}}>
-                        <input type={"file"} accept={"image/*"} onChange={handleImage} />
                         {
-                            imageDataUrl &&
-                            <img
-                                src={imageDataUrl}
-                                alt={"Selected"}
-                                onClick={sampleImage}
-                                title={"Click the picture to pick its colour"}
-                                style={{maxWidth: "100%", borderRadius: "10px", cursor: "crosshair"}}
-                            />
-                        }
-                        {
-                            extractedColors.length > 0 &&
-                            <>
-                                <span style={labelStyle}>Tap a colour to add or remove it — or click the picture to sample a pixel</span>
-                                <div style={{display: "flex", flexWrap: "wrap", gap: "0.5rem"}}>
-                                    {
-                                        extractedColors.map((hex) => (
-                                            <button
-                                                key={hex}
-                                                type={"button"}
-                                                aria-pressed={colors.includes(hex)}
-                                                title={colors.includes(hex) ? "Remove colour" : "Add colour"}
-                                                onClick={() => toggleChip(hex)}
-                                                style={chipStyle(hex, colors.includes(hex))}
-                                            />
-                                        ))
-                                    }
-                                </div>
-                                <div>
-                                    <HaButton
-                                        label={"Add all"}
-                                        onClick={() => setColors((current) => {
-                                            const merged = [...current];
-                                            extractedColors.forEach((hex) => { if (!merged.includes(hex)) merged.push(hex); });
-                                            return merged;
-                                        })}
-                                    />
-                                </div>
-                            </>
+                            extractedColors.length === 0
+                                ? <span style={labelStyle}>Upload a picture above to extract its colours.</span>
+                                : <>
+                                    <span style={labelStyle}>Tap a colour to add or remove it — or click the picture to sample a pixel</span>
+                                    <div style={{display: "flex", flexWrap: "wrap", gap: "0.5rem"}}>
+                                        {
+                                            extractedColors.map((hex) => (
+                                                <button
+                                                    key={hex}
+                                                    type={"button"}
+                                                    aria-pressed={colors.includes(hex)}
+                                                    title={colors.includes(hex) ? "Remove colour" : "Add colour"}
+                                                    onClick={() => toggleChip(hex)}
+                                                    style={chipStyle(hex, colors.includes(hex))}
+                                                />
+                                            ))
+                                        }
+                                    </div>
+                                </>
                         }
                     </div>
                 }
@@ -501,6 +516,7 @@ export const PresetEditor :React.FunctionComponent<{
                     error &&
                     <div style={{color: "#ff5252", fontFamily: "sans-serif"}} role={"alert"}>{error}</div>
                 }
+
                 <div style={{display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.25rem"}}>
                     <HaButton label={"Cancel"} variant={"secondary"} onClick={onClose} />
                     <HaButton label={saving ? "Saving…" : "Save preset"} onClick={save} disabled={saving} />

@@ -308,7 +308,6 @@ export const PresetApplyPage: React.FunctionComponent<{
 
     const [distribution, setDistribution] = useLocalStorage<string>("scene_presets_apply_page_distribution", "sequence");
     const [transitionStyle, setTransitionStyle] = useLocalStorage<string>("scene_presets_apply_page_transition_style", "fade");
-    const [effectPresets, setEffectPresets] = useState<Array<Preset>>([]);
     const [editorOpen, setEditorOpen] = useState<boolean>(false);
 
 
@@ -329,11 +328,6 @@ export const PresetApplyPage: React.FunctionComponent<{
         return Array.from(effects).sort();
     }, [hass, targets]);
 
-    const selectedEntityIds = React.useMemo(() => {
-        const entityIds = targets?.entity_id;
-        return Array.isArray(entityIds) ? entityIds : (entityIds ? [entityIds] : []);
-    }, [targets]);
-
     const localize = React.useCallback(
         (key: string, fallback: string) => hass?.localize?.(`component.scene_presets.${key}`) || fallback,
         [hass]
@@ -344,17 +338,6 @@ export const PresetApplyPage: React.FunctionComponent<{
         const values = [current.entity_id, current.device_id, current.area_id, current.floor_id, current.label_id];
         return values.some((value) => (Array.isArray(value) ? value.length > 0 : Boolean(value)));
     }, [targets]);
-
-    useEffect(() => {
-        if (!hasTargets) {
-            setEffectPresets([]);
-            return;
-        }
-
-        hass.callWS({type: "scene_presets/get_effect_presets", targets: targets})
-            .then((result) => setEffectPresets(result?.presets || []))
-            .catch(() => setEffectPresets([]));
-    }, [hass, hasTargets, targets]);
 
     const targetStates = React.useMemo(() => {
         const entityIds = targets?.entity_id;
@@ -586,34 +569,6 @@ export const PresetApplyPage: React.FunctionComponent<{
             distribution, transitionStyle,
             fetchActiveDynamicScenes
         ]
-    );
-
-    const handleEffectTap = React.useCallback(
-        (preset: Preset) => {
-            if (!hasTargets) {
-                setStatusMessage(localize("status.no_targets", "Select at least one target before applying a preset."));
-                setStatusIsError(true);
-                return;
-            }
-
-            setApplying(true);
-            setStatusMessage("");
-
-            hass.callService("scene_presets", "apply_effect", {
-                targets: targets,
-                effect: preset.effect,
-                brightness: customBrightness ? customBrightnessValue : undefined,
-            }).then(() => {
-                setStatusMessage(localize("status.applied", "Preset applied."));
-                setStatusIsError(false);
-            }).catch((error) => {
-                setStatusMessage(error?.message || localize("status.failed", "Failed to apply the preset."));
-                setStatusIsError(true);
-            }).finally(() => {
-                setApplying(false);
-            });
-        },
-        [hass, targets, hasTargets, customBrightness, customBrightnessValue, localize]
     );
 
     const handleDeletePreset = React.useCallback(
@@ -1145,38 +1100,6 @@ export const PresetApplyPage: React.FunctionComponent<{
                             </div>
                         );
                     })
-                }
-
-                {
-                    effectPresets.length > 0 &&
-                    <div key={"category_wled_effects"}>
-                        <h3
-                            style={{
-                                fontFamily: "sans-serif"
-                            }}
-                        >
-                            {localize("ui.wled_effects", "WLED Effects")}
-                        </h3>
-                        <div
-                            style={{
-                                display: "flex",
-                                flexWrap: "wrap",
-                                justifyContent: "center"
-                            }}
-                        >
-                            {
-                                effectPresets.map((preset) => (
-                                    <PresetTile
-                                        key={"effect_" + preset.id}
-                                        id={preset.id}
-                                        name={preset.name}
-                                        colors={preset.lights}
-                                        onClick={() => handleEffectTap(preset)}
-                                    />
-                                ))
-                            }
-                        </div>
-                    </div>
                 }
 
                 {
