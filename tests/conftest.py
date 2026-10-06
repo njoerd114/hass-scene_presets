@@ -58,11 +58,11 @@ def _install_homeassistant_stub():
     color.color_temperature_to_rgb = color_temperature_to_rgb
     color.color_RGB_to_xy = color_RGB_to_xy
 
-    def color_xy_to_RGB(x, y, brightness=255):
-        total = x + y
+    def color_xy_to_RGB(vX, vY):
+        total = vX + vY
         if total <= 0:
-            return (0.0, 0.0, 0.0)
-        return (brightness * x / total, brightness * y / total, 0.0)
+            return (0, 0, 0)
+        return (round(255 * vX / total), round(255 * vY / total), 0)
 
     def color_RGB_to_hs(r, g, b):
         return (0.0, 0.0)
