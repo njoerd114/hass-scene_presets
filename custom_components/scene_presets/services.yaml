@@ -440,6 +440,13 @@ start_circadian:
           min: 5
           max: 3600
           unit_of_measurement: seconds
+    adaptive_lighting_switch:
+      name: "Adaptive Lighting switch"
+      description: "When set, reads the circadian curve from this Adaptive Lighting switch and falls back to the built-in engine when it is off or unavailable."
+      selector:
+        entity:
+          integration: adaptive_lighting
+          domain: switch
 
 stop_circadian:
   name: "Stop circadian lighting"
