@@ -649,9 +649,12 @@ async def async_setup_entry(
     hass.data[DOMAIN]["schedules"] = stored_schedule.get("schedules", [])
     hass.data[DOMAIN]["schedule_fired"] = set()
 
-    await hass.config_entries.async_forward_entry_setups(entry, ["scene"])
-
     await async_setup_view(hass)
+
+    try:
+        await hass.config_entries.async_forward_entry_setups(entry, ["scene"])
+    except Exception:
+        _LOGGER.exception("Scene Presets failed to set up the scene platform")
 
     async_setup_websocket_api(hass)
 

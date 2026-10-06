@@ -1,8 +1,12 @@
+import logging
+
 from .const import NAME, DOMAIN, PANEL_URL
-from .file_utils import VERSION, PRESET_DATA, BASE_PATH
+from .file_utils import VERSION, PRESET_DATA, BASE_PATH, ensure_userdata_dirs
 from homeassistant.core import HomeAssistant
 from homeassistant.components.http import HomeAssistantView, StaticPathConfig
 from homeassistant.components.frontend import async_remove_panel, async_register_built_in_panel
+
+_LOGGER = logging.getLogger(__name__)
 
 # Adapted from https://github.com/hacs/integration/blob/7d46a52de0df2466aa65e446458b952150398f4c/custom_components/hacs/frontend.py#L58
 try:
@@ -12,6 +16,7 @@ except ImportError:
         if "frontend_extra_module_url" not in hass.data:
             hass.data["frontend_extra_module_url"] = set()
         hass.data["frontend_extra_module_url"].add(url)
+
 
 class ScenePresetDataView(HomeAssistantView):
     url = f'/assets/{DOMAIN}/scene_presets.json'
@@ -23,8 +28,23 @@ class ScenePresetDataView(HomeAssistantView):
             result=PRESET_DATA,
         )
 
+
+async def _register_static_paths(hass, static_paths):
+    for config in static_paths:
+        try:
+            await hass.http.async_register_static_paths([config])
+        except Exception:
+            _LOGGER.warning(
+                "Scene Presets could not register static path %s",
+                getattr(config, "url_path", config),
+                exc_info=True,
+            )
+
+
 async def async_setup_view(hass):
     if not hass.data.setdefault(DOMAIN, {}).get("static_paths_registered"):
+        await hass.async_add_executor_job(ensure_userdata_dirs)
+
         static_paths = [
             StaticPathConfig(PANEL_URL, hass.config.path(f'{BASE_PATH}/frontend/scene_presets_panel.js'), True),
             StaticPathConfig(f'/assets/{DOMAIN}/iconset.js', hass.config.path(f'{BASE_PATH}/res/iconset.js'), True),
@@ -33,7 +53,7 @@ async def async_setup_view(hass):
 
         static_paths.extend(await get_preset_image_paths(hass))
 
-        await hass.http.async_register_static_paths(static_paths)
+        await _register_static_paths(hass, static_paths)
         hass.data[DOMAIN]["static_paths_registered"] = True
 
     hass.http.register_view(ScenePresetDataView)
@@ -56,8 +76,10 @@ async def async_setup_view(hass):
         },
     )
 
+
 async def async_remove_view(hass):
     async_remove_panel(hass, "scene_presets", warn_if_unknown=False)
+
 
 async def get_preset_image_paths(hass):
     static_paths = []
