@@ -8,7 +8,7 @@ interface HaDialogProps {
 }
 
 class HaDialog extends Component<HaDialogProps> {
-    private elementRef: React.RefObject<HTMLInputElement | null>;
+    private elementRef: React.RefObject<HTMLElement | null>;
 
     constructor(props: HaDialogProps) {
         super(props);
@@ -21,20 +21,37 @@ class HaDialog extends Component<HaDialogProps> {
     };
 
     componentDidMount() {
-        this.elementRef.current!.addEventListener("closed", this.handleClosed);
+        this.applyProperties();
+        if (this.elementRef.current) {
+            this.elementRef.current.addEventListener("closed", this.handleClosed);
+        }
+    }
+
+    componentDidUpdate() {
+        this.applyProperties();
     }
 
     componentWillUnmount() {
-        this.elementRef.current!.removeEventListener("closed", this.handleClosed);
+        if (this.elementRef.current) {
+            this.elementRef.current.removeEventListener("closed", this.handleClosed);
+        }
+    }
+
+    applyProperties() {
+        const element: any = this.elementRef.current;
+        if (!element) {
+            return;
+        }
+
+        element.open = this.props.open;
+        if (this.props.heading !== undefined) {
+            element.headerTitle = this.props.heading;
+        }
     }
 
     render() {
         return (
-            <ha-dialog
-                ref={this.elementRef}
-                open={this.props.open}
-                heading={this.props.heading}
-            >
+            <ha-dialog ref={this.elementRef}>
                 {this.props.children}
             </ha-dialog>
         );
