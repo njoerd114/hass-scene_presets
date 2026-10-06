@@ -9,7 +9,7 @@ import {HaSelect} from "../components/hass/selectors/HaSelect";
 import HaIconButton from "../components/hass/building_blocks/HaIconButton";
 import {Category, Preset} from "../types";
 import HaDialog from "../components/hass/building_blocks/HaDialog";
-import MwcButton from "../components/hass/building_blocks/MwcButton";
+import HaButton from "../components/hass/building_blocks/HaButton";
 import {DynamicSceneTile} from "../components/DynamicSceneTile";
 import {CategoryTiles} from "../components/CategoryTiles";
 import {PresetEditor} from "../components/PresetEditor";
@@ -1037,7 +1037,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                         marginTop: "0.75rem"
                     }}
                 >
-                    <MwcButton
+                    <HaButton
                         label={localize("ui.create_preset", "Create preset")}
                         onClick={() => setEditorOpen(true)}
                     />
@@ -1217,13 +1217,15 @@ export const PresetApplyPage: React.FunctionComponent<{
                         </pre>
                     </div>
 
-                    <MwcButton
-                        label={"Close"}
-                        onClick={() => {
-                            setAutomationDialogOpen(false);
-                        }}
-                        slot={"secondaryAction"}
-                    />
+                    <div style={{display: "flex", justifyContent: "flex-end", marginTop: "0.5rem"}}>
+                        <HaButton
+                            label={"Close"}
+                            variant={"secondary"}
+                            onClick={() => {
+                                setAutomationDialogOpen(false);
+                            }}
+                        />
+                    </div>
                 </HaDialog>
             </div>
 

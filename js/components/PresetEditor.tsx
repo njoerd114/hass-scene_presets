@@ -1,7 +1,7 @@
 import React, {useRef, useState} from "react";
 
 import HaDialog from "./hass/building_blocks/HaDialog";
-import MwcButton from "./hass/building_blocks/MwcButton";
+import HaButton from "./hass/building_blocks/HaButton";
 import {Category} from "../types";
 import {
     GeneratedPalette,
@@ -349,7 +349,7 @@ export const PresetEditor :React.FunctionComponent<{
                             onChange={(event) => setPickerColor(event.target.value)}
                             style={colorInputStyle}
                         />
-                        <MwcButton label={"Add colour"} onClick={() => addColorHex(pickerColor)} />
+                        <HaButton label={"Add colour"} onClick={() => addColorHex(pickerColor)} />
                     </div>
                 }
 
@@ -386,7 +386,7 @@ export const PresetEditor :React.FunctionComponent<{
                                     }
                                 </div>
                                 <div>
-                                    <MwcButton
+                                    <HaButton
                                         label={"Add all"}
                                         onClick={() => setColors((current) => {
                                             const merged = [...current];
@@ -411,7 +411,7 @@ export const PresetEditor :React.FunctionComponent<{
                                 onChange={(event) => setSeedColor(event.target.value)}
                                 style={colorInputStyle}
                             />
-                            <MwcButton label={"Generate palettes"} onClick={generate} />
+                            <HaButton label={"Generate palettes"} onClick={generate} />
                         </div>
                         {
                             palettes.map((palette) => (
@@ -441,7 +441,7 @@ export const PresetEditor :React.FunctionComponent<{
                                             })
                                         }
                                     </div>
-                                    <MwcButton
+                                    <HaButton
                                         label={"Add all"}
                                         onClick={() => setColors((current) => {
                                             const merged = [...current];
@@ -462,18 +462,11 @@ export const PresetEditor :React.FunctionComponent<{
                     error &&
                     <div style={{color: "#ff5252", fontFamily: "sans-serif"}} role={"alert"}>{error}</div>
                 }
+                <div style={{display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.25rem"}}>
+                    <HaButton label={"Cancel"} variant={"secondary"} onClick={onClose} />
+                    <HaButton label={saving ? "Saving…" : "Save preset"} onClick={save} disabled={saving} />
+                </div>
             </div>
-
-            <MwcButton
-                label={"Cancel"}
-                onClick={onClose}
-                slot={"secondaryAction"}
-            />
-            <MwcButton
-                label={saving ? "Saving…" : "Save preset"}
-                onClick={save}
-                slot={"primaryAction"}
-            />
         </HaDialog>
     );
 };
