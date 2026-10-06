@@ -167,9 +167,9 @@ def async_setup_websocket_api(hass) -> None:
         data = await hass.async_add_executor_job(read_custom_presets) or {"presets": [], "categories": []}
 
         category_name = msg.get("category_name")
-        if category_name and not preset.get("categoryId"):
+        if category_name:
             preset["categoryId"] = ensure_category(data, category_name)
-        if not preset.get("categoryId"):
+        elif not preset.get("categoryId"):
             preset["categoryId"] = ensure_category(data, DEFAULT_CATEGORY_NAME)
 
         errors = validate_single_preset(preset)
