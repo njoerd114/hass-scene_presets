@@ -60,11 +60,13 @@ const chipStyle = (hex: string, selected: boolean): React.CSSProperties => ({
 export const PresetEditor :React.FunctionComponent<{
     hass: any,
     categories: Array<Category>,
+    availableEffects?: Array<string>,
     onClose: () => void,
     onSaved: () => void,
 }> = ({
     hass,
     categories,
+    availableEffects = [],
     onClose,
     onSaved
 }): React.JSX.Element => {
@@ -81,6 +83,8 @@ export const PresetEditor :React.FunctionComponent<{
     const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
     const [saving, setSaving] = useState<boolean>(false);
     const [error, setError] = useState<string>("");
+    const [effect, setEffect] = useState<string>("");
+    const [wledPreset, setWledPreset] = useState<string>("");
 
     const imageCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -190,6 +194,12 @@ export const PresetEditor :React.FunctionComponent<{
             }
             if (imgFilename) {
                 preset.img = imgFilename;
+            }
+            if (effect.trim()) {
+                preset.effect = effect.trim();
+            }
+            if (wledPreset.trim()) {
+                preset.wled_preset = wledPreset.trim();
             }
 
             const response = await hass.callWS({
@@ -332,6 +342,35 @@ export const PresetEditor :React.FunctionComponent<{
                         style={{width: "100%"}}
                     />
                 </label>
+
+                <div style={{display: "flex", gap: "0.75rem"}}>
+                    <label style={{flex: 1}}>
+                        <span style={labelStyle}>WLED effect (optional)</span>
+                        <input
+                            type={"text"}
+                            list={"scene-preset-effects"}
+                            value={effect}
+                            placeholder={"e.g. Rainbow"}
+                            onChange={(event) => setEffect(event.target.value)}
+                            style={inputStyle}
+                        />
+                        <datalist id={"scene-preset-effects"}>
+                            {
+                                availableEffects.map((name) => <option key={name} value={name} />)
+                            }
+                        </datalist>
+                    </label>
+                    <label style={{flex: 1}}>
+                        <span style={labelStyle}>WLED preset (optional)</span>
+                        <input
+                            type={"text"}
+                            value={wledPreset}
+                            placeholder={"e.g. Christmas"}
+                            onChange={(event) => setWledPreset(event.target.value)}
+                            style={inputStyle}
+                        />
+                    </label>
+                </div>
 
                 <div style={{display: "flex", gap: "0.5rem"}}>
                     <button type={"button"} style={tabStyle(mode === "manual")} onClick={() => setMode("manual")}>Manual</button>

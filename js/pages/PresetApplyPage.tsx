@@ -1184,6 +1184,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                     <PresetEditor
                         hass={hass}
                         categories={categories}
+                        availableEffects={availableEffects}
                         onClose={() => setEditorOpen(false)}
                         onSaved={onDataChanged}
                     />
