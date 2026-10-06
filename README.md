@@ -4,7 +4,7 @@
 
 # Scene Presets
 
-**Hue-like scene presets for Home Assistant.** Save colour presets and apply them to **any** `light` entity — with dynamic scenes, native WLED support, circadian lighting and scheduling. No bridge, no vendor lock-in, no account.
+**Hue-like scene presets for Home Assistant.** Save colour presets and apply them to **any** `light` entity — with dynamic scenes, native WLED support, circadian lighting (standalone or powered by Adaptive Lighting) and scheduling. No bridge, no vendor lock-in, no account.
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=njoerd114&repository=hass-scene_presets&category=integration)
 [![GitHub release](https://img.shields.io/github/v/release/njoerd114/hass-scene_presets?style=flat-square)](https://github.com/njoerd114/hass-scene_presets/releases)
@@ -21,7 +21,7 @@
 - **Dynamic scenes** — endless loops that re-apply a preset with smooth, smart-shuffled colour transitions.
 - **WLED support** — trigger native WLED presets, effects, palettes, speed and intensity, per segment.
 - **Scene entities** — expose presets as native Home Assistant `scene` entities.
-- **Circadian lighting** — adapt colour temperature and brightness to the sun throughout the day.
+- **Circadian lighting** — adapt colour temperature and brightness to the sun throughout the day, using the built-in engine or an existing [Adaptive Lighting](https://adaptive-lighting.nijho.lt/) setup.
 - **Scheduling** — apply presets at specific times and weekdays.
 - **Import / export / share** — move custom presets between instances via JSON or a share code, and auto-generate presets from a light's effects.
 - **Server-side sync** — optionally share favourites, targets and tunables across browsers and devices.
@@ -81,6 +81,22 @@ Enable the **Dynamic** toggle to turn any preset into an endless loop that re-ap
 
 See [docs/Smart Shuffle.md](./docs/Smart%20Shuffle.md) for how smart shuffle avoids white flashes during transitions.
 
+## Circadian lighting
+
+Adapt colour temperature and brightness to the sun throughout the day. Circadian lighting is driven entirely by services, so you start it from an automation or script rather than the panel.
+
+It can either compute the curve itself or read it from an existing [Adaptive Lighting](https://adaptive-lighting.nijho.lt/) switch:
+
+```yaml
+service: scene_presets.start_circadian
+data:
+  targets:
+    entity_id: light.hallway
+  adaptive_lighting_switch: switch.adaptive_lighting_living_room
+```
+
+Circadian lighting is not persistent (it stops on a Home Assistant restart) and only updates lights that are currently on. See [docs/Circadian Lighting.md](./docs/Circadian%20Lighting.md) for the full field reference and examples.
+
 ## WLED
 
 For WLED lights, presets can trigger native WLED presets and control effects, palettes, speed and intensity per segment. The panel also offers an **Effect** picker and a generated **WLED Effects** category built from the effects your selected lights report.
@@ -99,7 +115,7 @@ Use the sidebar UI, then click the robot icon to copy a ready-to-paste service c
 | `scene_presets.stop_dynamic_scenes_for_targets` | Stop all dynamic scenes touching the given targets. |
 | `scene_presets.stop_all_dynamic_scenes` | Stop every running dynamic scene. |
 | `scene_presets.get_dynamic_scenes` | Return all active dynamic scenes. |
-| `scene_presets.start_circadian` / `stop_circadian` | Start/stop circadian lighting for the given targets. |
+| `scene_presets.start_circadian` / `stop_circadian` | Start/stop circadian lighting for the given targets, optionally driven by an Adaptive Lighting switch. |
 | `scene_presets.set_schedule` / `clear_schedule` / `get_schedule` | Manage scheduled presets. |
 | `scene_presets.export_presets` / `import_presets` | Move custom presets between instances (JSON or share code). |
 | `scene_presets.generate_effect_presets` | Create presets for every effect a set of lights reports. |

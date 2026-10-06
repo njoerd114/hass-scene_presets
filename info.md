@@ -12,7 +12,7 @@ Scene Presets lets you save and apply colour presets to **any** `light` entity a
 - **Dynamic scenes**: continuously cycle a preset with smooth, smart-shuffled colour transitions.
 - **WLED support**: native WLED presets, effects, palettes, speed and intensity.
 - **Scene entities**: expose presets as native Home Assistant `scene` entities.
-- **Circadian lighting** and time-of-day **scheduling**.
+- **Circadian lighting** (built-in, or driven by [Adaptive Lighting](https://adaptive-lighting.nijho.lt/)) and time-of-day **scheduling**.
 - **Import / export / share** custom presets, and auto-generate presets from a light's effects.
 - **Server-side sync** of favourites, targets and tunables across devices.
 - Fully local: no cloud, no account.
@@ -29,4 +29,5 @@ Requires Home Assistant **2026.7.0** or newer.
 
 - [README](https://github.com/njoerd114/hass-scene_presets#readme)
 - [Custom presets](https://github.com/njoerd114/hass-scene_presets/blob/master/docs/Custom%20Presets.md)
+- [Circadian lighting](https://github.com/njoerd114/hass-scene_presets/blob/master/docs/Circadian%20Lighting.md)
 - [Report an issue](https://github.com/njoerd114/hass-scene_presets/issues)
