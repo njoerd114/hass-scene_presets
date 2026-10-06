@@ -96,6 +96,7 @@ START_CIRCADIAN_SCHEMA = vol.Schema({
     vol.Optional("min_brightness", default=1): vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),
     vol.Optional("max_brightness", default=100): vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),
     vol.Optional("interval", default=60): vol.All(vol.Coerce(int), vol.Range(min=5, max=86400)),
+    vol.Optional("adaptive_lighting_switch"): cv.entity_id,
 })
 
 SET_SCHEDULE_SCHEMA = vol.Schema({
@@ -490,6 +491,7 @@ async def async_setup(hass, config):
                 "min_brightness": call.data.get("min_brightness", 1),
                 "max_brightness": call.data.get("max_brightness", 100),
                 "interval": call.data.get("interval", 60),
+                "adaptive_lighting_switch": call.data.get("adaptive_lighting_switch"),
             }
         )
         _LOGGER.debug("Started circadian lighting for %s", light_entity_ids)
