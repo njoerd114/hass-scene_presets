@@ -2,7 +2,8 @@ import React, {useRef, useState} from "react";
 
 import HaDialog from "./hass/building_blocks/HaDialog";
 import HaButton from "./hass/building_blocks/HaButton";
-import {Category} from "../types";
+import {Category, Preset} from "../types";
+import {presetImageUrl} from "../helpers";
 import {
     GeneratedPalette,
     extractPalette,
@@ -11,6 +12,7 @@ import {
     hexToXy,
     refinePalette,
     rgbToHex,
+    xyToHex,
 } from "../colors";
 
 const TARGET_WIDTH = 904;
@@ -62,30 +64,37 @@ export const PresetEditor :React.FunctionComponent<{
     hass: any,
     categories: Array<Category>,
     availableEffects?: Array<string>,
+    preset?: Preset,
     onClose: () => void,
     onSaved: () => void,
 }> = ({
     hass,
     categories,
     availableEffects = [],
+    preset,
     onClose,
     onSaved
 }): React.JSX.Element => {
-    const [name, setName] = useState<string>("");
-    const [categoryId, setCategoryId] = useState<string>(categories[0]?.id ?? "");
+    const [name, setName] = useState<string>(preset?.name ?? "");
+    const [categoryId, setCategoryId] = useState<string>(preset?.categoryId ?? categories[0]?.id ?? "");
     const [newCategory, setNewCategory] = useState<string>("");
-    const [brightness, setBrightness] = useState<number>(200);
-    const [colors, setColors] = useState<Array<string>>(["#ff9500"]);
+    const [brightness, setBrightness] = useState<number>(preset?.bri ?? 200);
+    const [colors, setColors] = useState<Array<string>>(
+        preset?.lights?.length ? preset.lights.map((color) => xyToHex(color)) : ["#ff9500"]
+    );
     const [mode, setMode] = useState<Mode>("manual");
     const [pickerColor, setPickerColor] = useState<string>("#ff9500");
     const [seedColor, setSeedColor] = useState<string>("#ff9500");
     const [palettes, setPalettes] = useState<Array<GeneratedPalette>>([]);
     const [extractedColors, setExtractedColors] = useState<Array<string>>([]);
     const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
-    const [effect, setEffect] = useState<string>("");
-    const [wledPreset, setWledPreset] = useState<string>("");
+    const [effect, setEffect] = useState<string>(preset?.effect ?? "");
+    const [wledPreset, setWledPreset] = useState<string>((preset as any)?.wled_preset ?? "");
     const [saving, setSaving] = useState<boolean>(false);
     const [error, setError] = useState<string>("");
+
+    const existingImageUrl = preset ? presetImageUrl(preset) : undefined;
+    const picturePreview = imageDataUrl ?? existingImageUrl;
 
     const imageCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -188,7 +197,7 @@ export const PresetEditor :React.FunctionComponent<{
             setError("Add at least one colour.");
             return;
         }
-        if (!imageDataUrl) {
+        if (!imageDataUrl && !existingImageUrl) {
             setError("Please upload a picture to use as the preset tile.");
             return;
         }
@@ -197,34 +206,40 @@ export const PresetEditor :React.FunctionComponent<{
         setError("");
 
         try {
-            const content = imageDataUrl.split(",")[1] ?? "";
-            const imageResult = await hass.callWS({
-                type: "scene_presets/save_preset_image",
-                filename: `${name.trim()}.jpg`,
-                content,
-            });
-
-            const preset: any = {
-                name: name.trim(),
-                bri: brightness,
-                lights: colors.map((hex) => hexToXy(hex)),
-            };
+            const nextPreset: any = preset ? {...preset} : {};
+            nextPreset.name = name.trim();
+            nextPreset.bri = brightness;
+            nextPreset.lights = colors.map((hex) => hexToXy(hex));
             if (categoryId) {
-                preset.categoryId = categoryId;
+                nextPreset.categoryId = categoryId;
             }
-            if (imageResult?.filename) {
-                preset.img = imageResult.filename;
+
+            if (imageDataUrl) {
+                const content = imageDataUrl.split(",")[1] ?? "";
+                const imageResult = await hass.callWS({
+                    type: "scene_presets/save_preset_image",
+                    filename: `${name.trim()}.jpg`,
+                    content,
+                });
+                if (imageResult?.filename) {
+                    nextPreset.img = imageResult.filename;
+                }
             }
+
             if (effect.trim()) {
-                preset.effect = effect.trim();
+                nextPreset.effect = effect.trim();
+            } else {
+                delete nextPreset.effect;
             }
             if (wledPreset.trim()) {
-                preset.wled_preset = wledPreset.trim();
+                nextPreset.wled_preset = wledPreset.trim();
+            } else {
+                delete nextPreset.wled_preset;
             }
 
             const response = await hass.callWS({
                 type: "scene_presets/save_preset",
-                preset,
+                preset: nextPreset,
                 category_name: newCategory.trim() || undefined,
             });
 
@@ -258,7 +273,7 @@ export const PresetEditor :React.FunctionComponent<{
         <HaDialog
             open={true}
             onClose={onClose}
-            heading={"Create preset"}
+            heading={preset ? "Edit preset" : "Create preset"}
         >
             <div
                 style={{
@@ -275,9 +290,9 @@ export const PresetEditor :React.FunctionComponent<{
                     <span style={labelStyle}>Picture (used as the preset tile)</span>
                     <input type={"file"} accept={"image/*"} onChange={handlePicture} />
                     {
-                        imageDataUrl &&
+                        picturePreview &&
                         <img
-                            src={imageDataUrl}
+                            src={picturePreview}
                             alt={"Preset tile"}
                             onClick={sampleImage}
                             title={"Click the picture to pick its colour"}

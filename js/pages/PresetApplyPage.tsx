@@ -309,6 +309,7 @@ export const PresetApplyPage: React.FunctionComponent<{
     const [distribution, setDistribution] = useLocalStorage<string>("scene_presets_apply_page_distribution", "sequence");
     const [transitionStyle, setTransitionStyle] = useLocalStorage<string>("scene_presets_apply_page_transition_style", "fade");
     const [editorOpen, setEditorOpen] = useState<boolean>(false);
+    const [editingPreset, setEditingPreset] = useState<Preset | null>(null);
 
 
     const [favoritePresets, setFavoritePresets] = useLocalStorage<Array<string>>("scene_presets_apply_page_favorite_presets", []);
@@ -591,6 +592,17 @@ export const PresetApplyPage: React.FunctionComponent<{
         [hass, localize, onDataChanged]
     );
 
+    const handleEditPreset = React.useCallback(
+        (id: string) => {
+            const target = presets.find((item) => item.id === id);
+            if (target) {
+                setEditingPreset(target);
+                setEditorOpen(true);
+            }
+        },
+        [presets]
+    );
+
     const handleDynamicSceneTap = React.useCallback(
         (id: string) => {
             hass.callService(
@@ -645,6 +657,7 @@ export const PresetApplyPage: React.FunctionComponent<{
                     }
                 }}
                 onDelete={preset.custom ? handleDeletePreset : undefined}
+                onEdit={preset.custom ? handleEditPreset : undefined}
             />;
 
             if (isFav) {
@@ -656,7 +669,7 @@ export const PresetApplyPage: React.FunctionComponent<{
             all: allTiles,
             favoriteIds: favoriteTiles,
         };
-    }, [presets, favoritePresets, handlePresetTap, setFavoritePresets, handleDeletePreset]);
+    }, [presets, favoritePresets, handlePresetTap, setFavoritePresets, handleDeletePreset, handleEditPreset]);
 
     const presetMap = useMemo(() => {
         const _presetMap = {};
@@ -994,7 +1007,10 @@ export const PresetApplyPage: React.FunctionComponent<{
                 >
                     <HaButton
                         label={localize("ui.create_preset", "Create preset")}
-                        onClick={() => setEditorOpen(true)}
+                        onClick={() => {
+                            setEditingPreset(null);
+                            setEditorOpen(true);
+                        }}
                     />
                 </div>
 
@@ -1108,7 +1124,11 @@ export const PresetApplyPage: React.FunctionComponent<{
                         hass={hass}
                         categories={categories}
                         availableEffects={availableEffects}
-                        onClose={() => setEditorOpen(false)}
+                        preset={editingPreset ?? undefined}
+                        onClose={() => {
+                            setEditorOpen(false);
+                            setEditingPreset(null);
+                        }}
                         onSaved={onDataChanged}
                     />
                 }
